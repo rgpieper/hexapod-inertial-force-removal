@@ -1,0 +1,10 @@
+[project]
+name = "hexapod-inertial-force-removal"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "ezc3d>=1.5.19",
+    "numpy>=2.0.2",
+]
