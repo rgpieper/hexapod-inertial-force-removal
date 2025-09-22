@@ -5,6 +5,8 @@ import numpy as np
 import pandas as pd
 import IPython
 
+# NOTE: Nexus graph depicts first analog datapoint to align with frame 1 and datapoint 5 aligning with frame 2
+
 class C3DMan:
     def __init__(self, c3d_path: str):
 
