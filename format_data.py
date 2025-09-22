@@ -11,6 +11,13 @@ class C3DMan:
         self.c3d_path = c3d_path
         self.c3d_data = ezc3d.c3d(self.c3d_path)
 
+    def extract_accelerometers(
+            self,
+            descriptions: list[str]
+    ):
+        
+        pass
+
 if __name__ == "__main__":
 
     TestTrial = C3DMan("data/fullgrid_loaded_01.c3d")
