@@ -49,7 +49,7 @@ class C3DMan:
                 'a4y': ('Analog Accelerometer::Acceleration [22,2]', 'Acceleration.Y'),
                 'a4z': ('Analog Accelerometer::Acceleration [22,3]', 'Acceleration.Z')
             }
-    ):
+    ) -> None:
         
         accel_idx = [self.analogs_idx[q] for q in desc_labs.values()]
         accel_data = self.c3d_data["data"]["analogs"][0][accel_idx]
@@ -68,7 +68,7 @@ class C3DMan:
                 'fz3': ('Kistler Force Plate 2.0.0.0::Raw [27]', 'Raw.FZ3'),
                 'fz4': ('Kistler Force Plate 2.0.0.0::Raw [27]', 'Raw.FZ4')
             }
-    ):
+    ) -> None:
         
         rawforce_idx = [self.analogs_idx[q] for q in desc_labs.values()]
         rawforce_data = self.c3d_data["data"]["analogs"][0][rawforce_idx]
@@ -81,7 +81,7 @@ class C3DMan:
             threshold: float,
             t_base: float = 0.1,
             t_buffer: float = 0.025
-    ):
+    ) -> Tuple[List[npt.NDArray], List[npt.NDArray]]:
         
         n_segment = math.ceil(t_segment*self.fs)
         n_base = math.ceil(t_base*self.fs)
@@ -162,7 +162,7 @@ class FlattenedWindows(Dataset):
         else:
             return X_window
         
-    def restructure_windowed_output(self, indexed_windows: List[Tuple[int, torch.Tensor]]):
+    def restructure_windowed_output(self, indexed_windows: List[Tuple[int, torch.Tensor]]) -> List[torch.Tensor]:
 
         num_output_chans = indexed_windows[0][1].numel()//self.window_size
         output_tensors = [torch.zeros(in_tens.shape[0], num_output_chans) for in_tens in self.input_tensors]
@@ -213,7 +213,7 @@ class SegmentedSequences(Dataset):
         else:
             return X_segment, sequence_length
         
-def sequence_collate_fn(batch):
+def sequence_collate_fn(batch) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
 
     data_x, data_y, lengths = zip(*batch)
 
