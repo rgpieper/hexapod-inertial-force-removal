@@ -211,7 +211,24 @@ class SegmentedSequences(Dataset):
             Y_segment = self.target_tensors[idx]
             return X_segment, Y_segment, sequence_length
         else:
-            return X_segment, sequence_length        
+            return X_segment, sequence_length
+        
+def sequence_collate_fn(batch):
+
+    data_x, data_y, lengths = zip(*batch)
+
+    # pad sequence to the length of the longest sequence in batch
+    # batch_first sets output shape to (batch_size, sequence_length, features)
+    x_padded = torch.nn.utils.rnn.pad_sequence(data_x, batch_first=True, padding_value=0)
+    y_padded = torch.nn.utils.rnn.pad_sequence(data_y, batch_first=True, padding_value=0)
+
+    # sort padded segments according to descending lengths
+    lengths = torch.tensor(lengths)
+    sorted_lengths, sorted_indices = lengths.sort(descending=True)
+    x_padded = x_padded[sorted_indices]
+    y_padded = y_padded[sorted_indices]
+
+    return x_padded, y_padded, sorted_lengths
 
 if __name__ == "__main__":
 
