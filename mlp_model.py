@@ -22,7 +22,7 @@ class BasicMLP(nn.Module):
 
         self.relu = nn.ReLU()
 
-    def forward(self, x: torch.Tensor):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
 
         x = self.relu(self.fc1(x)) # through fully connection layer 1, then ReLU activation
         x = self.relu(self.fc2(x)) # through fc2, then ReLU activation
@@ -40,7 +40,7 @@ class BasicMLP(nn.Module):
             num_epochs: int,
             device: torch.device,
             save_path: str
-    ):
+    ) -> None:
         
         best_val_loss = float("inf")
 
@@ -98,12 +98,12 @@ class BasicMLP(nn.Module):
                 torch.save(self.state_dict(), save_path)
                 print(f"    -> Model saved!")
     
-    def load_weights(self, path: str):
+    def load_weights(self, path: str) -> None:
 
         self.load_state_dict(torch.load(path, map_location='cpu'))
         self.eval() # set model to evaluation mode
 
-def calc_avg_vaf(outputs: List[torch.Tensor], targets: List[torch.Tensor]):
+def calc_avg_vaf(outputs: List[torch.Tensor], targets: List[torch.Tensor]) -> float:
 
     num_channels = targets[0].shape[1]
 
