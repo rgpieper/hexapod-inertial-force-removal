@@ -6,7 +6,7 @@ from format_data import C3DMan, FlattenedWindows
 from sklearn.model_selection import train_test_split
 import IPython
 
-class AccForceMLP(nn.Module):
+class BasicMLP(nn.Module):
     def __init__(
             self,
             input_dim: int,
@@ -141,7 +141,7 @@ if __name__ == "__main__":
     input_dim = accel_chans*window_size
     output_dim = force_chans*window_size
 
-    Model = AccForceMLP(input_dim=input_dim, output_dim=output_dim)
+    Model = BasicMLP(input_dim=input_dim, output_dim=output_dim)
 
     C3D_datasets = (
         C3DMan("data/fullgrid_loaded_01.c3d"),
