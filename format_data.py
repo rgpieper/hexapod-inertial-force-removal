@@ -230,6 +230,17 @@ def sequence_collate_fn(batch) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor
 
     return x_padded, y_padded, sorted_lengths
 
+def unpad_unbatch(padded_output: torch.Tensor, lengths: torch.Tensor) -> List[torch.Tensor]:
+
+    unpadded_segments = []
+    lengths_list = lengths.cpu().tolist()
+
+    for i, length in enumerate(lengths_list):
+        sequence = padded_output[i, :length, :] # padded_output: (B, L, C), using single integer removes that dimension from tensor
+        unpadded_segments.append(sequence)
+
+    return unpadded_segments
+
 if __name__ == "__main__":
 
     TestTrial = C3DMan("data/fullgrid_unloaded_02.c3d")
