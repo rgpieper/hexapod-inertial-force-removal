@@ -3,7 +3,7 @@
 import ezc3d
 import numpy as np
 import numpy.typing as npt
-from typing import List, Optional
+from typing import List, Tuple, Optional
 import math
 import pandas as pd
 import torch
@@ -128,6 +128,8 @@ class FlattenedWindows(Dataset):
         self.input_tensors = [torch.tensor(arr, dtype=torch.float32) for arr in input_arrays]
         if target_arrays is not None:
             self.target_tensors = [torch.tensor(arr, dtype=torch.float32) for arr in target_arrays]
+        else:
+            self.target_tensors = None
 
         self.index_map = []
 
@@ -152,13 +154,33 @@ class FlattenedWindows(Dataset):
         end_idx = start_idx + self.window_size
 
         input_series = self.input_tensors[series_idx] # shape: (window_size, n_input_channels)
-        X_window = input_series[start_idx:end_idx,:].flatten() # shape: (n_input_channels*window_size,)
-        if target_series is not None:
+        X_window = input_series[start_idx:end_idx,:].contiguous().flatten() # shape: (n_input_channels*window_size,)
+        if self.target_tensors is not None:
             target_series = self.target_tensors[series_idx] # shape: (window_size, n_output_channels)
-            Y_window = target_series[start_idx:end_idx,:].flatten() # shape: (n_output_channels*window_size,)
+            Y_window = target_series[start_idx:end_idx,:].contiguous().flatten() # shape: (n_output_channels*window_size,)
             return X_window, Y_window
         else:
             return X_window
+        
+    def restructure_windowed_output(self, indexed_windows: List[Tuple[int, torch.Tensor]]):
+
+        num_output_chans = indexed_windows[0][1].numel()//self.window_size
+        output_tensors = [torch.zeros(in_tens.shape[0], num_output_chans) for in_tens in self.input_tensors]
+        summed_window_segments = [torch.zeros(in_tens.shape[0], num_output_chans) for in_tens in self.input_tensors]
+        prediction_counts = [torch.zeros(in_tens.shape[0]) for in_tens in self.input_tensors]
+
+        for index, window in indexed_windows:
+            series_idx, start_idx = self.index_map[index]
+            end_idx = start_idx + self.window_size
+            window_unflattened = window.reshape(-1, num_output_chans)
+            summed_window_segments[series_idx][start_idx:end_idx,:] += window_unflattened
+            prediction_counts[series_idx][start_idx:end_idx] += 1
+        
+        for series_idx, series_counts in enumerate(prediction_counts):
+            predicted_mask = series_counts != 0
+            output_tensors[series_idx][predicted_mask,:] = summed_window_segments[series_idx][predicted_mask,:] / prediction_counts[series_idx][predicted_mask].unsqueeze(1)
+            
+        return output_tensors
 
 if __name__ == "__main__":
 

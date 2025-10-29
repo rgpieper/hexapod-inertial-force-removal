@@ -1,7 +1,9 @@
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
-from format_data import C3DMan, FlatAccForce
+from typing import List
+from format_data import C3DMan, FlattenedWindows
+from sklearn.model_selection import train_test_split
 import IPython
 
 class AccForceMLP(nn.Module):
@@ -32,6 +34,7 @@ class AccForceMLP(nn.Module):
             self,
             train_loader: DataLoader,
             val_loader: DataLoader,
+            val_dataset: FlattenedWindows,
             criterion,
             optimizer,
             num_epochs: int,
@@ -61,14 +64,14 @@ class AccForceMLP(nn.Module):
                 running_train_loss += loss.item()*inputs.size(0)
 
             epoch_train_loss = running_train_loss / len(train_loader.dataset)
-            epoch_train_vaf = calc_avg_vaf(outputs, targets, num_channels=8)
 
             # Validation Phase
             self.eval()
             total_val_loss = 0.0
 
+            indexed_outputs = []
             with torch.no_grad():
-                for inputs, targets in val_loader:
+                for batch_idx, (inputs, targets) in enumerate(val_loader):
                     inputs, targets = inputs.to(device), targets.to(device)
 
                     outputs = self(inputs)
@@ -76,13 +79,18 @@ class AccForceMLP(nn.Module):
 
                     total_val_loss += loss.item()*inputs.size(0)
 
+                    indexed_outputs.append((batch_idx, outputs.squeeze(0)))
+
+            all_outputs = val_dataset.restructure_windowed_output(indexed_outputs)
+
             epoch_val_loss = total_val_loss / len(val_loader.dataset)
-            epoch_val_vaf = calc_avg_vaf(outputs, targets, num_channels=8)
+            epoch_val_vaf = calc_avg_vaf(all_outputs, val_dataset.target_tensors)
 
             # Report and Save Phase
             print(f"Epoch {epoch+1}/{num_epochs}")
-            print(f"    -> Train Loss: {epoch_train_loss:.6f}, Avg VAF: {epoch_train_vaf:.1f}%")
-            print(f"    -> Validation Loss: {epoch_val_loss:.6f}, Avg VAF: {epoch_val_vaf:.1f}%")
+            print(f"    -> Train Loss: {epoch_train_loss:.6f}")
+            print(f"    -> Validation Loss: {epoch_val_loss:.6f}")
+            print(f"    -> Average Validation VAF: {epoch_val_vaf:.1f}")
 
             if epoch_val_loss < best_val_loss:
                 best_val_loss = epoch_val_loss
@@ -95,33 +103,38 @@ class AccForceMLP(nn.Module):
         self.load_state_dict(torch.load(path, map_location='cpu'))
         self.eval() # set model to evaluation mode
 
-def calc_avg_vaf(outputs: torch.Tensor, targets: torch.Tensor, num_channels: int):
+def calc_avg_vaf(outputs: List[torch.Tensor], targets: List[torch.Tensor]):
 
-    channel_outputs = outputs.reshape(-1, num_channels)
-    channel_targets = targets.reshape(-1, num_channels)
+    num_channels = targets[0].shape[1]
 
-    channel_vafs = []
+    segment_avg_vafs = []
 
-    for c in range(num_channels):
-        y_c = channel_targets[:,c]
-        y_hat_c = channel_outputs[:,c]
-        error_c = y_c - y_hat_c
-        var_error_c = torch.var(error_c)
-        var_targets_c = torch.var(y_c)
-        if var_targets_c == 0:
-            vaf_c = 100.0 if var_error_c == 0 else -float("inf")
-        else:
-            vaf_c = (1 - (var_error_c/var_targets_c))*100.0
-        channel_vafs.append(vaf_c.item())
-    
-    return sum(channel_vafs)/len(channel_vafs)
+    for s in range(len(targets)):
+
+        channel_vafs = []
+
+        for c in range(num_channels):
+            y_c = targets[s][:,c]
+            y_hat_c = outputs[s][:,c]
+            error_c = y_c - y_hat_c
+            var_error_c = torch.var(error_c)
+            var_targets_c = torch.var(y_c)
+            if var_targets_c == 0:
+                vaf_c = 100.0 if var_error_c == 0 else -float("inf")
+            else:
+                vaf_c = (1 - (var_error_c/var_targets_c))*100.0
+            channel_vafs.append(vaf_c.item())
+
+        segment_avg_vafs.append(sum(channel_vafs)/len(channel_vafs))
+
+    return sum(segment_avg_vafs)/len(segment_avg_vafs)
     
 if __name__ == "__main__":
 
     window_size = 500
     step_size = 50
     batch_size = 32
-    train_split = 0.8
+    train_ratio = 0.8
     accel_chans = 12
     force_chans = 8
 
@@ -147,24 +160,38 @@ if __name__ == "__main__":
     
     print("Segments compiled!")
 
-    # create dataset
-    full_dataset = FlatAccForce(
-        accel_arrays=accel_segments,
-        force_arrays=force_segments,
+    # split pert segments (not windows) for training/validation
+    segment_pairs = list(zip(accel_segments, force_segments))
+    train_pairs, val_pairs = train_test_split(
+        segment_pairs,
+        test_size=1.0-train_ratio,
+        random_state=42 # seed for reproducibility
+    )
+    train_accel_segments, train_force_segments = zip(*train_pairs)
+    val_accel_segments, val_force_segments = zip(*val_pairs)
+    train_accel_segments = list(train_accel_segments)
+    train_force_segments = list(train_force_segments)
+    val_accel_segments = list(val_accel_segments)
+    val_force_segments = list(val_force_segments)
+
+    # create datasets
+    train_dataset = FlattenedWindows(
+        input_arrays=train_accel_segments,
+        target_arrays=train_force_segments,
         window_size=window_size,
         step_size=step_size
     )
 
-    del C3D_datasets, accel_segments, force_segments
-    
-    # split training and validation datasets
-    train_size = int(train_split*len(full_dataset))
-    val_size = len(full_dataset) - train_size
-    train_dataset, val_dataset = torch.utils.data.random_split(full_dataset, [train_size, val_size])
+    val_dataset = FlattenedWindows(
+        input_arrays=val_accel_segments,
+        target_arrays=val_force_segments,
+        window_size=window_size,
+        step_size=step_size
+    )
 
     # create dataloaders
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+    val_loader = DataLoader(val_dataset, batch_size=1, shuffle=False) # batch size 1 for sequence reconstruction
 
     # device setup
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -182,6 +209,7 @@ if __name__ == "__main__":
     Model.train_val_save(
         train_loader=train_loader,
         val_loader=val_loader,
+        val_dataset=val_dataset,
         criterion=criterion,
         optimizer=optimizer,
         num_epochs=num_epochs,
