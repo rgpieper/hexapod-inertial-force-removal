@@ -3,7 +3,7 @@
 import ezc3d
 import numpy as np
 import numpy.typing as npt
-from typing import List
+from typing import List, Optional
 import math
 import pandas as pd
 import torch
@@ -117,16 +117,17 @@ class FlattenedWindows(Dataset):
     def __init__(
             self,
             input_arrays: List[npt.ArrayLike],
-            target_arrays: List[npt.ArrayLike],
             window_size: int,
-            step_size: int
+            step_size: int,
+            target_arrays: Optional[List[npt.ArrayLike]] = None
     ):
         
         self.window_size = window_size
         self.step_size = step_size
 
         self.input_tensors = [torch.tensor(arr, dtype=torch.float32) for arr in input_arrays]
-        self.target_tensors = [torch.tensor(arr, dtype=torch.float32) for arr in target_arrays]
+        if target_arrays is not None:
+            self.target_tensors = [torch.tensor(arr, dtype=torch.float32) for arr in target_arrays]
 
         self.index_map = []
 
@@ -151,12 +152,13 @@ class FlattenedWindows(Dataset):
         end_idx = start_idx + self.window_size
 
         input_series = self.input_tensors[series_idx] # shape: (window_size, n_input_channels)
-        target_series = self.target_tensors[series_idx] # shape: (window_size, n_output_channels)
-
         X_window = input_series[start_idx:end_idx,:].flatten() # shape: (n_input_channels*window_size,)
-        Y_window = target_series[start_idx:end_idx,:].flatten() # shape: (n_output_channels*window_size,)
-
-        return X_window, Y_window
+        if target_series is not None:
+            target_series = self.target_tensors[series_idx] # shape: (window_size, n_output_channels)
+            Y_window = target_series[start_idx:end_idx,:].flatten() # shape: (n_output_channels*window_size,)
+            return X_window, Y_window
+        else:
+            return X_window
 
 if __name__ == "__main__":
 
