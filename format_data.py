@@ -181,6 +181,37 @@ class FlattenedWindows(Dataset):
             output_tensors[series_idx][predicted_mask,:] = summed_window_segments[series_idx][predicted_mask,:] / prediction_counts[series_idx][predicted_mask].unsqueeze(1)
             
         return output_tensors
+    
+class SegmentedSequences(Dataset):
+    def __init__(
+            self,
+            input_arrays: List[npt.ArrayLike],
+            target_arrays: Optional[List[npt.ArrayLike]] = None
+    ):
+        
+        self.input_tensors = [torch.tensor(arr, dtype=torch.float32) for arr in input_arrays]
+        if target_arrays is not None:
+            if len(input_arrays) != len(target_arrays):
+                raise ValueError("The number of input series must match the number of target series.")
+            self.target_tensors = [torch.tensor(arr, dtype=torch.float32) for arr in target_arrays]
+        else:
+            self.target_tensors = None
+
+        self.num_segments = len(self.input_tensors)
+
+    def __len__(self):
+
+        return self.num_segments
+    
+    def __getitem__(self, idx):
+        
+        X_segment = self.input_tensors[idx]
+        sequence_length = X_segment.shape[0]
+        if self.target_tensors is not None:
+            Y_segment = self.target_tensors[idx]
+            return X_segment, Y_segment, sequence_length
+        else:
+            return X_segment, sequence_length        
 
 if __name__ == "__main__":
 
