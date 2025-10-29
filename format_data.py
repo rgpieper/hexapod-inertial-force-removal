@@ -113,11 +113,11 @@ class C3DMan:
 
         return accel_segments, rawforce_segments
 
-class FlatAccForce(Dataset):
+class FlattenedWindows(Dataset):
     def __init__(
             self,
-            accel_arrays: List[npt.ArrayLike],
-            force_arrays: List[npt.ArrayLike],
+            input_arrays: List[npt.ArrayLike],
+            output_arrays: List[npt.ArrayLike],
             window_size: int,
             step_size: int
     ):
@@ -125,13 +125,13 @@ class FlatAccForce(Dataset):
         self.window_size = window_size
         self.step_size = step_size
 
-        self.accel_tensors = [torch.tensor(arr, dtype=torch.float32) for arr in accel_arrays]
-        self.force_tensors = [torch.tensor(arr, dtype=torch.float32) for arr in force_arrays]
+        self.input_tensors = [torch.tensor(arr, dtype=torch.float32) for arr in input_arrays]
+        self.output_tensors = [torch.tensor(arr, dtype=torch.float32) for arr in output_arrays]
 
         self.index_map = []
 
-        for series_idx, accel_series in enumerate(self.accel_tensors):
-            series_length = accel_series.shape[0]
+        for series_idx, input_series in enumerate(self.input_tensors):
+            series_length = input_series.shape[0]
             max_start = series_length - self.window_size
             if max_start >= 0:
                 start_indices = np.arange(0, series_length-self.window_size+self.step_size, self.step_size)
@@ -150,11 +150,11 @@ class FlatAccForce(Dataset):
         series_idx, start_idx = self.index_map[idx]
         end_idx = start_idx + self.window_size
 
-        accel_series = self.accel_tensors[series_idx] # shape: (window_size, 12)
-        force_series = self.force_tensors[series_idx] # shape: (window_size, 8)
+        input_series = self.input_tensors[series_idx] # shape: (window_size, n_input_channels)
+        output_series = self.output_tensors[series_idx] # shape: (window_size, n_output_channels)
 
-        X_window = accel_series[start_idx:end_idx,:].flatten() # shape: (12*window_size,)
-        Y_window = force_series[start_idx:end_idx,:].flatten() # shape: (8*window_size,)
+        X_window = input_series[start_idx:end_idx,:].flatten() # shape: (n_input_channels*window_size,)
+        Y_window = output_series[start_idx:end_idx,:].flatten() # shape: (n_output_channels*window_size,)
 
         return X_window, Y_window
 
