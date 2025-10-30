@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
+from tqdm import tqdm
 from format_data import C3DMan, SegmentedSequences, sequence_collate_fn, unpad_unbatch
 from mlp_model import calc_avg_vaf
 
@@ -160,7 +161,9 @@ class MIMOCNNLSTM(nn.Module):
             running_train_loss = 0.0
             total_train_elements = 0
 
-            for inputs, targets, lengths in train_loader:
+            train_loop = tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs} (Train)", leave=False)
+
+            for inputs, targets, lengths in train_loop:
                 inputs, targets = inputs.to(device), targets.to(device)
 
                 optimizer.zero_grad()
@@ -170,8 +173,13 @@ class MIMOCNNLSTM(nn.Module):
                 optimizer.step()
 
                 total_valid_elements = torch.sum(lengths)*outputs.size(2)
+                current_batch_loss = loss.item() * total_valid_elements.item()
+
                 total_train_elements += total_valid_elements.item()
-                running_train_loss += loss.item() * total_valid_elements.item()
+                running_train_loss += current_batch_loss
+
+                current_mse = current_batch_loss / total_valid_elements.item()
+                train_loop.set_postfix(mse=f"{current_mse:.6f}", avg_mse=f"{running_train_loss/total_train_elements:.6f}")
 
             epoch_train_loss = running_train_loss / total_train_elements
 
@@ -183,8 +191,10 @@ class MIMOCNNLSTM(nn.Module):
             val_targets = []
             val_outputs = []
 
+            val_loop = tqdm(val_loader, desc=f"Epoch {epoch+1}/{num_epochs} (Val)", leave=False)
+
             with torch.no_grad():
-                for inputs, targets, lengths in val_loader:
+                for inputs, targets, lengths in val_loop:
                     inputs, targets = inputs.to(device), targets.to(device)
                     
                     outputs = self(inputs, lengths)
@@ -193,6 +203,9 @@ class MIMOCNNLSTM(nn.Module):
                     total_valid_elements = torch.sum(lengths)*outputs.size(2)
                     total_val_elements += total_valid_elements
                     total_val_loss += loss.item()*total_valid_elements.item()
+
+                    current_mse = loss.item()
+                    val_loop.set_postfix(mse=f"{current_mse:.6f}")
 
                     unpadded_targets = unpad_unbatch(targets.cpu(), lengths)
                     unpadded_outputs = unpad_unbatch(outputs.cpu(), lengths)
@@ -247,8 +260,8 @@ if __name__ == "__main__":
 
     C3D_datasets = (
         C3DMan("data/fullgrid_loaded_01.c3d"),
-        # C3DMan("data/fullgrid_unloaded_01.c3d"),
-        # C3DMan("data/fullgrid_unloaded_02.c3d")
+        C3DMan("data/fullgrid_unloaded_01.c3d"),
+        C3DMan("data/fullgrid_unloaded_02.c3d")
     )
 
     accel_segments = []
@@ -321,5 +334,5 @@ if __name__ == "__main__":
         optimizer=optimizer,
         num_epochs=num_epochs,
         device=device,
-        save_path="models/cnnlstm_29102025.pth"
+        save_path="models/cnnlstm_30102025.pth"
     )
