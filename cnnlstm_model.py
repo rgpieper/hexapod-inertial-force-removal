@@ -1,4 +1,6 @@
+
 from typing import Tuple, List
+from datetime import datetime
 import numpy as np
 import numpy.typing as npt
 import torch
@@ -256,7 +258,11 @@ if __name__ == "__main__":
     force_chans = 8
     train_ratio = 0.8
     batch_size = 16
-    num_epochs = 20
+    num_epochs = 30
+    save_filename = "cnnlstm"
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    savepath = f"models/{save_filename}_{timestamp}.pth"
 
     C3D_datasets = (
         C3DMan("data/fullgrid_loaded_01.c3d"),
@@ -334,5 +340,5 @@ if __name__ == "__main__":
         optimizer=optimizer,
         num_epochs=num_epochs,
         device=device,
-        save_path="models/cnnlstm_30102025.pth"
+        save_path=savepath
     )

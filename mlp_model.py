@@ -1,3 +1,5 @@
+
+from datetime import datetime
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
@@ -137,6 +139,11 @@ if __name__ == "__main__":
     train_ratio = 0.8
     accel_chans = 12
     force_chans = 8
+    num_epochs = 20
+    save_filename = "mlp"
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    savepath = f"models/{save_filename}_{timestamp}.pth"
 
     input_dim = accel_chans*window_size
     output_dim = force_chans*window_size
@@ -203,7 +210,6 @@ if __name__ == "__main__":
     # setup optimizer
     learning_rate = 1e-4
     optimizer = torch.optim.Adam(Model.parameters(), lr=learning_rate)
-    num_epochs = 20
 
     # train the model
     Model.train_val_save(
@@ -214,5 +220,5 @@ if __name__ == "__main__":
         optimizer=optimizer,
         num_epochs=num_epochs,
         device=device,
-        save_path="models/mlp_28102025.pth"
+        save_path=savepath
     )
