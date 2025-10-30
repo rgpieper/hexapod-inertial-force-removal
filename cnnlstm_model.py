@@ -47,8 +47,8 @@ class MIMOCNNLSTM(nn.Module):
             nn.ReLU()
         )
 
-        # encoder stage 2: GRU (temporal context/memory)
-        self.rnn = nn.GRU(
+        # encoder stage 2: LSTM (temporal context/memory)
+        self.rnn = nn.LSTM(
             input_size=hidden_cnn, # feature size from conv_encoder output
             hidden_size=hidden_rnn,
             num_layers=num_rnn_layers,
@@ -60,7 +60,7 @@ class MIMOCNNLSTM(nn.Module):
         self.dropout = nn.Dropout(p=0.2)
 
         # decoder stage 4: final dense layers (prediction)
-        # predict output values (e.g. forces) at each timestep (GRU outputs for each timstep)
+        # predict output values (e.g. forces) at each timestep (LSTM outputs for each timstep)
         self.decoder = nn.Sequential(
             nn.Linear(hidden_rnn, hidden_lin),
             nn.ReLU(),
@@ -88,11 +88,12 @@ class MIMOCNNLSTM(nn.Module):
             batch_first=True
         )
 
-        # initialize hidden state (h0) to zeros: (num_rnn_layers*num_directions), batch_size, hidden_rnn)
+        # initialize hidden state (h0) and cell state (c0) to zeros: (num_rnn_layers*num_directions), batch_size, hidden_rnn)
         h0 = torch.zeros(self.num_rnn_layers*1, batch_size, self.hidden_rnn).to(x_standardized.device)
+        c0 = torch.zeros(self.num_rnn_layers*1, batch_size, self.hidden_rnn).to(x_standardized.device)
 
-        # GRU forward pass modeling memory
-        packed_rnn_out, _ = self.rnn(packed_cnn_out, h0) # hidden state starts at zero for each segment, thanks to pack_padded_sequence
+        # LSTM forward pass modeling memory
+        packed_rnn_out, _ = self.rnn(packed_cnn_out, (h0, c0)) # hidden state and cell state start at zero for each segment, thanks to pack_padded_sequence
 
         # unpack sequence: (batch, L, hidden_rnn)
         rnn_out, _ = torch.nn.utils.rnn.pad_packed_sequence(
