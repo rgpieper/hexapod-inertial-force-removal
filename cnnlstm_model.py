@@ -19,7 +19,7 @@ class MIMOCNNLSTM(nn.Module):
             input_stats: Tuple[npt.NDArray, npt.NDArray],
             output_stats: Tuple[npt.NDArray, npt.NDArray],
             hidden_cnn: int = 128,
-            hidden_rnn: int = 156,
+            hidden_rnn: int = 256,
             num_rnn_layers: int = 2,
             hidden_lin: int = 64
     ):
@@ -56,7 +56,7 @@ class MIMOCNNLSTM(nn.Module):
             hidden_size=hidden_rnn,
             num_layers=num_rnn_layers,
             batch_first=True, # input shape: (batch, length, features)
-            bidirectional=False # causal
+            bidirectional=True # non-causal (not for realtime deployment)
         )
 
         # dropout stage 3
@@ -65,7 +65,7 @@ class MIMOCNNLSTM(nn.Module):
         # decoder stage 4: final dense layers (prediction)
         # predict output values (e.g. forces) at each timestep (LSTM outputs for each timstep)
         self.decoder = nn.Sequential(
-            nn.Linear(hidden_rnn, hidden_lin),
+            nn.Linear(hidden_rnn*2, hidden_lin),
             nn.ReLU(),
             nn.Linear(hidden_lin, hidden_lin),
             nn.ReLU(),
@@ -94,8 +94,9 @@ class MIMOCNNLSTM(nn.Module):
         )
 
         # initialize hidden state (h0) and cell state (c0) to zeros: (num_rnn_layers*num_directions), batch_size, hidden_rnn)
-        h0 = torch.zeros(self.num_rnn_layers*1, batch_size, self.hidden_rnn).to(x_standardized.device)
-        c0 = torch.zeros(self.num_rnn_layers*1, batch_size, self.hidden_rnn).to(x_standardized.device)
+        num_directions = 2 # bidirectional rnn
+        h0 = torch.zeros(self.num_rnn_layers*num_directions, batch_size, self.hidden_rnn).to(x_standardized.device)
+        c0 = torch.zeros(self.num_rnn_layers*num_directions, batch_size, self.hidden_rnn).to(x_standardized.device)
 
         # LSTM forward pass modeling memory
         packed_rnn_out, _ = self.rnn(packed_cnn_out, (h0, c0)) # hidden state and cell state start at zero for each segment, thanks to pack_padded_sequence
@@ -258,7 +259,7 @@ if __name__ == "__main__":
     force_chans = 8
     train_ratio = 0.8
     batch_size = 16
-    num_epochs = 30
+    num_epochs = 20
     save_filename = "cnnlstm"
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
