@@ -64,6 +64,8 @@ class MIMOCNNLSTM(nn.Module):
         self.decoder = nn.Sequential(
             nn.Linear(hidden_rnn, hidden_lin),
             nn.ReLU(),
+            nn.Linear(hidden_lin, hidden_lin),
+            nn.ReLU(),
             nn.Linear(hidden_lin, output_size)
         )
 
