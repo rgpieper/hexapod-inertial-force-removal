@@ -21,7 +21,8 @@ class MIMOCNNLSTM(nn.Module):
             hidden_cnn: int = 128,
             hidden_rnn: int = 256,
             num_rnn_layers: int = 2,
-            hidden_lin: int = 64
+            hidden_lin1: int = 128,
+            hidden_lin2: int = 64
     ):
         super().__init__()
 
@@ -65,11 +66,11 @@ class MIMOCNNLSTM(nn.Module):
         # decoder stage 4: final dense layers (prediction)
         # predict output values (e.g. forces) at each timestep (LSTM outputs for each timstep)
         self.decoder = nn.Sequential(
-            nn.Linear(hidden_rnn*2, hidden_lin),
+            nn.Linear(hidden_rnn*2, hidden_lin1),
             nn.ReLU(),
-            nn.Linear(hidden_lin, hidden_lin),
+            nn.Linear(hidden_lin1, hidden_lin2),
             nn.ReLU(),
-            nn.Linear(hidden_lin, output_size)
+            nn.Linear(hidden_lin2, output_size)
         )
 
     def forward(self, x_padded: torch.Tensor, lengths: torch.Tensor) -> torch.Tensor:
