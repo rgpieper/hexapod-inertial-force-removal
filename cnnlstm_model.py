@@ -52,12 +52,13 @@ class MIMOCNNLSTM(nn.Module):
         )
 
         # encoder stage 2: LSTM (temporal context/memory)
+        self.rnn_directions = 2 # bidirectional
         self.rnn = nn.LSTM(
             input_size=hidden_cnn, # feature size from conv_encoder output
             hidden_size=hidden_rnn,
             num_layers=num_rnn_layers,
             batch_first=True, # input shape: (batch, length, features)
-            bidirectional=True # non-causal (not for realtime deployment)
+            bidirectional=True if self.rnn_directions==2 else False # non-causal (not for realtime deployment)
         )
 
         # dropout stage 3
@@ -95,9 +96,8 @@ class MIMOCNNLSTM(nn.Module):
         )
 
         # initialize hidden state (h0) and cell state (c0) to zeros: (num_rnn_layers*num_directions), batch_size, hidden_rnn)
-        num_directions = 2 # bidirectional rnn
-        h0 = torch.zeros(self.num_rnn_layers*num_directions, batch_size, self.hidden_rnn).to(x_standardized.device)
-        c0 = torch.zeros(self.num_rnn_layers*num_directions, batch_size, self.hidden_rnn).to(x_standardized.device)
+        h0 = torch.zeros(self.num_rnn_layers*self.rnn_directions, batch_size, self.hidden_rnn).to(x_standardized.device)
+        c0 = torch.zeros(self.num_rnn_layers*self.rnn_directions, batch_size, self.hidden_rnn).to(x_standardized.device)
 
         # LSTM forward pass modeling memory
         packed_rnn_out, _ = self.rnn(packed_cnn_out, (h0, c0)) # hidden state and cell state start at zero for each segment, thanks to pack_padded_sequence
@@ -114,7 +114,7 @@ class MIMOCNNLSTM(nn.Module):
 
         # decoder predicting force at each time step
         # reshape to padded sequence shape
-        final_output_standardized = self.decoder(rnn_out.reshape(-1, self.hidden_rnn))
+        final_output_standardized = self.decoder(rnn_out.reshape(-1, self.hidden_rnn*self.rnn_directions))
         final_output_standardized = final_output_standardized.reshape(batch_size, max_seq_len, self.output_size)
 
         # un-standardize the output
