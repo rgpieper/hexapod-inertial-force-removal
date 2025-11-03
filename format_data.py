@@ -113,6 +113,55 @@ class C3DMan:
 
         return accel_segments, rawforce_segments
 
+class WindowedSequences(Dataset):
+    def __init__(
+            self,
+            input_arrays: List[npt.ArrayLike],
+            window_size: int,
+            step_size: int,
+            target_arrays: Optional[List[npt.ArrayLike]] = None
+    ):
+        
+        self.window_size = window_size
+        self.step_size = step_size
+
+        self.input_tensors = [torch.tensor(arr, dtype=torch.float32) for arr in input_arrays]
+        if target_arrays is not None:
+            self.target_tensors = [torch.tensor(arr, dtype=torch.float32) for arr in target_arrays]
+        else:
+            self.target_tensors = None
+
+        self.index_map = []
+
+        for series_idx, input_series in enumerate(self.input_tensors):
+            series_length = input_series.shape[0]
+            max_start = series_length - self.window_size
+            if max_start >= 0:
+                start_indices = np.arange(0, series_length-self.window_size+self.step_size, self.step_size)
+                valid_start_indices = start_indices[start_indices <= max_start]
+                series_indices = series_idx*np.ones_like(valid_start_indices)
+                self.index_map.extend(list(zip(series_indices, valid_start_indices)))
+
+        self.num_windows = len(self.index_map)
+
+    def __len__(self):
+
+        return self.num_windows
+    
+    def __getitem__(self, idx):
+
+        series_idx, start_idx = self.index_map[idx]
+        end_idx = start_idx + self.window_size
+
+        input_series = self.input_tensors[series_idx] # shape: (series_length, n_input_channels)
+        X_window = input_series[start_idx:end_idx,:] # shape: (window_size, n_input_channels)
+        if self.target_tensors is not None:
+            target_series = self.target_tensors[series_idx] # shape: (series_length, n_output_channels)
+            Y_window = target_series[start_idx:end_idx,:] # shape: (window_size, n_input_channels)
+            return X_window, Y_window
+        else:
+            return X_window
+
 class FlattenedWindows(Dataset):
     def __init__(
             self,
@@ -153,7 +202,7 @@ class FlattenedWindows(Dataset):
         series_idx, start_idx = self.index_map[idx]
         end_idx = start_idx + self.window_size
 
-        input_series = self.input_tensors[series_idx] # shape: (window_size, n_input_channels)
+        input_series = self.input_tensors[series_idx] # shape: (series_length, n_input_channels)
         X_window = input_series[start_idx:end_idx,:].contiguous().flatten() # shape: (n_input_channels*window_size,)
         if self.target_tensors is not None:
             target_series = self.target_tensors[series_idx] # shape: (window_size, n_output_channels)
