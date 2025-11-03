@@ -142,7 +142,7 @@ class MIMOFIR(nn.Module):
             batch_size = input_standardized.shape[0]
             
             for i in range(batch_size):
-                series_length = lengths[i]
+                series_length = lengths[i].item()
                 max_start = series_length - window_size
                 start_indices = np.arange(0, series_length-window_size+step_size, step_size)
                 valid_start_indices = start_indices[start_indices <= max_start]
