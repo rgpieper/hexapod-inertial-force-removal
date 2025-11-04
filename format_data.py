@@ -3,11 +3,11 @@
 import ezc3d
 import numpy as np
 import numpy.typing as npt
-from typing import List, Tuple, Optional
+from typing import Type, List, Tuple, Optional, Any, Dict
 import math
 import pandas as pd
 import torch
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 import IPython
 import matplotlib.pyplot as plt
 
@@ -261,6 +261,31 @@ class SegmentedSequences(Dataset):
             return X_segment, Y_segment, sequence_length
         else:
             return X_segment, sequence_length
+        
+def get_loader(
+        dataset_class: Type[Dataset],
+        input_arrays: List[npt.ArrayLike],
+        batch_size: int,
+        shuffle: bool,
+        collate_fn: Optional[Any] = None,
+        target_arrays: Optional[List[npt.ArrayLike]] = None,
+        **dataset_kwargs: Dict[str, Any]
+) -> DataLoader:
+
+    dataset = dataset_class(
+        input_arrays=input_arrays,
+        target_arrays=target_arrays,
+        **dataset_kwargs
+    )
+
+    loader = DataLoader(
+        dataset=dataset,
+        batch_size=batch_size,
+        shuffle=shuffle,
+        collate_fn=collate_fn
+    )
+
+    return loader
         
 def sequence_collate_fn(batch) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
 
