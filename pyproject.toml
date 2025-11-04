@@ -3,7 +3,7 @@ name = "hexapod-inertial-force-removal"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
     "ezc3d>=1.5.19",
     "ipython>=8.37.0",
