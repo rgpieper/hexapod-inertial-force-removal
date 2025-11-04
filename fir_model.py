@@ -48,7 +48,7 @@ class MIMOFIR(nn.Module):
     def forward(
             self,
             input: torch.Tensor # shape: (batch, channels, length)
-    ):
+    ) -> torch.Tensor:
         
         input_standardized = (input - self.input_mean) / self.input_std
         input_permuted = input_standardized.transpose(1, 2) # (B, L, C) -> (B, C, L) for Conv1d
