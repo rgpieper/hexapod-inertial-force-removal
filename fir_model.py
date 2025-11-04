@@ -280,6 +280,11 @@ class MIMOFIR(nn.Module):
         H_fir = np.transpose(H_reshaped, (0,2,1)) # (irf_length, output_dim, input_dim)
 
         return torch.from_numpy(H_fir).float()
+    
+    def load_weights(self, path: str) -> None:
+
+        self.load_state_dict(torch.load(path, map_location='cpu'))
+        self.eval() # set model to evaluation mode
 
 if __name__ == "__main__":
 
