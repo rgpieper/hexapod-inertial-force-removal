@@ -19,7 +19,7 @@ class MIMOCNNLSTM(nn.Module):
             input_stats: Tuple[npt.NDArray, npt.NDArray],
             output_stats: Tuple[npt.NDArray, npt.NDArray],
             hidden_cnn: int = 128,
-            hidden_rnn: int = 256,
+            hidden_rnn: int = 256, # total output is double for bidirectional
             num_rnn_layers: int = 2,
             hidden_lin1: int = 128,
             hidden_lin2: int = 64
@@ -37,6 +37,9 @@ class MIMOCNNLSTM(nn.Module):
         output_mean, output_std = output_stats
         self.register_buffer('output_mean', torch.from_numpy(output_mean).float())
         self.register_buffer('output_std', torch.from_numpy(output_std).float())
+
+        self.layer_1 = nn.Conv1d(input_size, hidden_cnn, kernel_size=3, padding=1)
+        self.layer_2 = nn.Conv1d(hidden_cnn, hidden_cnn, kernel_size=3, padding=1)
 
         # encoder stage 1: 1D CNN (feature extraction)
         self.conv_encoder = nn.Sequential(
@@ -67,7 +70,7 @@ class MIMOCNNLSTM(nn.Module):
         # decoder stage 4: final dense layers (prediction)
         # predict output values (e.g. forces) at each timestep (LSTM outputs for each timstep)
         self.decoder = nn.Sequential(
-            nn.Linear(hidden_rnn*2, hidden_lin1),
+            nn.Linear(hidden_rnn*self.rnn_directions, hidden_lin1),
             nn.ReLU(),
             nn.Linear(hidden_lin1, hidden_lin2),
             nn.ReLU(),
@@ -84,7 +87,12 @@ class MIMOCNNLSTM(nn.Module):
         # CNN encoder
         # permute x_padded for 1D CNN: (B, L, C) -> (B, C, L)
         x_permuted = x_standardized.permute(0, 2, 1)
-        cnn_out = self.conv_encoder(x_permuted)
+        print("Input", x_permuted.shape)
+        cnn_out = self.layer_1(x_permuted)
+        print(cnn_out.shape)
+        cnn_out = self.layer_2(cnn_out)
+        print(cnn_out.shape)
+        #self.conv_encoder(x_permuted)
         # permute back: (B, C, L) -> (B, L, C)
         cnn_out = cnn_out.permute(0, 2, 1)
 
@@ -268,8 +276,8 @@ if __name__ == "__main__":
 
     C3D_datasets = (
         C3DMan("data/fullgrid_loaded_01.c3d"),
-        C3DMan("data/fullgrid_unloaded_01.c3d"),
-        C3DMan("data/fullgrid_unloaded_02.c3d")
+        # C3DMan("data/fullgrid_unloaded_01.c3d"),
+        # C3DMan("data/fullgrid_unloaded_02.c3d")
     )
 
     accel_segments = []
