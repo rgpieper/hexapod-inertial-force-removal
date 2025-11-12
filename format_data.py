@@ -18,6 +18,8 @@ class C3DMan:
 
         self.c3d_path = c3d_path
         self.c3d_data = ezc3d.c3d(self.c3d_path)
+        print(f"C3D data loaded from path:")
+        print(c3d_path)
 
         desc_analog = self.c3d_data["parameters"]["ANALOG"]["DESCRIPTIONS"]["value"]
         lab_analog = self.c3d_data["parameters"]["ANALOG"]["LABELS"]["value"]
@@ -65,6 +67,10 @@ class C3DMan:
     ) -> None:
 
         self.accel_df = self.extract_analogs(name_mapping)
+        if self.accel_df.shape[1] > 0:
+            print(f"{self.accel_df.shape[1]} acceleration signals extracted with {self.accel_df.shape[0]} datapoints")
+        else:
+            print(f"ERROR: No acceleration signals found")
 
     def extract_rawaccel(
             self,
@@ -85,6 +91,10 @@ class C3DMan:
     ) -> None:
 
         self.rawaccel_df = self.extract_analogs(name_mapping)
+        if self.rawaccel_df.shape[1] > 0:
+            print(f"{self.rawaccel_df.shape[1]} raw voltage accelerometer signals extracted with {self.rawaccel_df.shape[0]} datapoints")
+        else:
+            print(f"ERROR: No raw voltage accelerometer signals found")
     
     def extract_rawforce(
             self,
@@ -101,6 +111,10 @@ class C3DMan:
     ) -> None:
 
         self.rawforce_df = self.extract_analogs(name_mapping)
+        if self.rawforce_df.shape[1] > 0:
+            print(f"{self.rawforce_df.shape[1]} raw force signals extracted with {self.rawforce_df.shape[0]} datapoints")
+        else:
+            print(f"ERROR: No raw force signals found")
 
     def extract_hextrigger(
             self,
@@ -110,6 +124,10 @@ class C3DMan:
     ) -> None:
         
         self.hextrigger_df = self.extract_analogs(name_mapping)
+        if self.hextrigger_df.shape[1] == 1:
+            print(f"Hexapod trigger signal extracted with {self.rawforce_df.shape[0]} datapoints")
+        else:
+            print(f"ERROR: Expected 1 hexapod trigger signal, found {self.hextrigger_df.shape[1]}")
 
     def extract_analogs(
             self,
