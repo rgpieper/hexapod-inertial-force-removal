@@ -124,7 +124,7 @@ class C3DMan:
 
         return analogs_df
 
-    def segment_trainperts(
+    def segment_trainperts_accelthresh(
             self,
             t_segment: float,
             threshold: float,

@@ -161,7 +161,7 @@ if __name__ == "__main__":
     for Set in C3D_datasets:
         Set.extract_accel()
         Set.extract_rawforce()
-        accel_segs, rawforce_segs = Set.segment_trainperts(t_segment = 1.15, threshold=1.0)
+        accel_segs, rawforce_segs = Set.segment_trainperts_accelthresh(t_segment = 1.15, threshold=1.0)
         accel_segments.extend(accel_segs)
         force_segments.extend(rawforce_segs)
     
@@ -201,7 +201,7 @@ if __name__ == "__main__":
     val_loader = DataLoader(val_dataset, batch_size=1, shuffle=False) # batch size 1 for sequence reconstruction
 
     # device setup
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") # on Anton, 2 GPUs: cuda:0, cuda:1
     Model.to(device)
 
     # setup loss function
