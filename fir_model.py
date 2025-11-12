@@ -311,7 +311,7 @@ if __name__ == "__main__":
         Set.extract_accel()
         Set.extract_rawforce()
         accel_segments.append(Set.accel_df.values)
-        force_segments.append(Set.rawforce_df.values)
+        force_segments.append(Set.force_df.values)
 
     print("Segments compiled!")
 

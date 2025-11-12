@@ -285,7 +285,7 @@ if __name__ == "__main__":
     for Set in C3D_datasets:
         Set.extract_accel()
         Set.extract_rawforce()
-        accel_segs, rawforce_segs = Set.segment_trainperts_accelthresh(t_segment = 1.15, threshold=1.0)
+        accel_segs, rawforce_segs = Set.segment_perts_accelthresh(t_segment = 1.15, threshold=1.0)
         accel_segments.extend(accel_segs)
         force_segments.extend(rawforce_segs)
     

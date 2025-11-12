@@ -33,8 +33,7 @@ class C3DMan:
         self.fs_points = self.c3d_data["header"]["points"]["frame_rate"]
 
         self.accel_df = pd.DataFrame()
-        self.rawaccel_df = pd.DataFrame()
-        self.rawforce_df = pd.DataFrame()
+        self.force_df = pd.DataFrame()
         self.hextrigger_df = pd.DataFrame()
         self.fs = self.fs_analog # unless otherwise modified
 
@@ -90,9 +89,9 @@ class C3DMan:
             }
     ) -> None:
 
-        self.rawaccel_df = self.extract_analogs(name_mapping)
-        if self.rawaccel_df.shape[1] > 0:
-            print(f"{self.rawaccel_df.shape[1]} raw voltage accelerometer signals extracted with {self.rawaccel_df.shape[0]} datapoints")
+        self.accel_df = self.extract_analogs(name_mapping)
+        if self.accel_df.shape[1] > 0:
+            print(f"{self.accel_df.shape[1]} raw voltage accelerometer signals extracted with {self.accel_df.shape[0]} datapoints")
         else:
             print(f"ERROR: No raw voltage accelerometer signals found")
     
@@ -110,9 +109,9 @@ class C3DMan:
             }
     ) -> None:
 
-        self.rawforce_df = self.extract_analogs(name_mapping)
-        if self.rawforce_df.shape[1] > 0:
-            print(f"{self.rawforce_df.shape[1]} raw force signals extracted with {self.rawforce_df.shape[0]} datapoints")
+        self.force_df = self.extract_analogs(name_mapping)
+        if self.force_df.shape[1] > 0:
+            print(f"{self.force_df.shape[1]} raw force signals extracted with {self.force_df.shape[0]} datapoints")
         else:
             print(f"ERROR: No raw force signals found")
 
@@ -125,7 +124,7 @@ class C3DMan:
         
         self.hextrigger_df = self.extract_analogs(name_mapping)
         if self.hextrigger_df.shape[1] == 1:
-            print(f"Hexapod trigger signal extracted with {self.rawforce_df.shape[0]} datapoints")
+            print(f"Hexapod trigger signal extracted with {self.force_df.shape[0]} datapoints")
         else:
             print(f"ERROR: Expected 1 hexapod trigger signal, found {self.hextrigger_df.shape[1]}")
 
@@ -141,8 +140,42 @@ class C3DMan:
         analogs_df[list(name_mapping.keys())] = analogs_data.T
 
         return analogs_df
+    
+    def segment_perts_trigger(
+            self,
+            t_segment: float, # sec, segment duration (including buffer)
+            t_timeout: float, # sec, time after pulse when new pulses will not be detected
+            t_buffer: float = 0.1, # sec, time before trigger to include in segment
+            threshold: float = 1.1 # V, trigger high ~1.25V
+    ) -> Tuple[List[npt.NDArray], List[npt.NDArray]]:
+        
+        n_segment = math.ceil(t_segment*self.fs)
+        n_timeout = math.ceil(t_timeout*self.fs)
+        n_buffer = math.ceil(t_buffer*self.fs)
 
-    def segment_trainperts_accelthresh(
+        accel_segments = []
+        force_segments = []
+        i = 0
+        num_trigs = 0
+        IPython.embed()
+        while i < len(self.hextrigger_df):
+            if self.hextrigger_df.iloc[i].values > threshold:
+                num_trigs += 1
+                i_start = i - n_buffer if i - n_buffer > 0 else 0
+                i_end = i_start + n_segment if i_start + n_segment < len(self.hextrigger_df) else len(self.hextrigger_df)
+                accel_seg = self.accel_df.iloc[i_start:i_end].values
+                accel_segments.append(accel_seg)
+                force_seg = self.force_df.iloc[i_start:i_end].values
+                force_segments.append(force_seg)
+                i += n_timeout
+            else:
+                i += 1
+
+        print(f"Found {num_trigs} triggers.")
+
+        return accel_segments, force_segments
+
+    def segment_perts_accelthresh(
             self,
             t_segment: float,
             threshold: float,
@@ -164,21 +197,21 @@ class C3DMan:
         a_base = a_norms.iloc[0:n_base].mean()
 
         accel_segments = []
-        rawforce_segments = []
+        force_segments = []
         i = n_base
         while i < len(a_norms):
             if any(abs(a_norms.iloc[i] - a_base) > threshold):
-                i_start = i-n_buffer if i-n_buffer >= 0 else 0
+                i_start = i-n_buffer if i-n_buffer > 0 else 0
                 i_next = i_start+n_segment if i_start+n_segment < len(a_norms) else len(a_norms)
                 accel_seg = self.accel_df.iloc[i_start:i_next].values
                 accel_segments.append(accel_seg)
-                rawforce_seg = self.rawforce_df.iloc[i_start:i_next].values
-                rawforce_segments.append(rawforce_seg)
+                force_seg = self.force_df.iloc[i_start:i_next].values
+                force_segments.append(force_seg)
                 i = i_next
             else:
-                i = i + 1
+                i += 1
 
-        return accel_segments, rawforce_segments
+        return accel_segments, force_segments
 
 class WindowedSequences(Dataset):
     def __init__(
@@ -384,13 +417,16 @@ def unpad_unbatch(padded_output: torch.Tensor, lengths: torch.Tensor) -> List[to
 
 if __name__ == "__main__":
 
-    TestTrial = C3DMan("data/noLoadPerts_X000_00.c3d")
-    TestTrial.print_analog_desclabs()
-    TestTrial.extract_rawaccel()
-    TestTrial.extract_rawforce()
-    TestTrial.extract_hextrigger()
+    c3d_path = "/Users/rgpieper/Documents/Neurobionics/Hexapod/hexapod-inertial-force-removal/data/noLoadPerts_X050_00.c3d"
+    pertinfo_path = "/Users/rgpieper/Documents/Neurobionics/Hexapod/hexapod-inertial-force-removal/data/axis_queue_X000.csv"
 
-    # TestTrial.accel_df.to_csv("data/accelerations_unloaded_02.csv", index=False)
-    # TestTrial.rawforce_df.to_csv("data/forces_unloaded_02.csv", index=False)
+    pertinfo_df = pd.read_csv(pertinfo_path)
+
+    Trial = C3DMan("data/noLoadPerts_X000_00.c3d")
+    Trial.print_analog_desclabs()
+    Trial.extract_rawaccel()
+    Trial.extract_rawforce()
+    Trial.extract_hextrigger()
+    accel_segs, force_segs = Trial.segment_perts_trigger(t_segment=1.3, t_timeout=1.0)
 
     IPython.embed()
