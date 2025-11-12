@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import ezc3d
+import c3d
 import numpy as np
 import numpy.typing as npt
 from typing import Type, List, Tuple, Optional, Any, Dict
@@ -17,20 +18,18 @@ class C3DMan:
     def __init__(self, c3d_path: str):
 
         self.c3d_path = c3d_path
-        self.c3d_data = ezc3d.c3d(self.c3d_path)
-        print(f"C3D data loaded from path:")
-        print(c3d_path)
 
-        desc_analog = self.c3d_data["parameters"]["ANALOG"]["DESCRIPTIONS"]["value"]
-        lab_analog = self.c3d_data["parameters"]["ANALOG"]["LABELS"]["value"]
-        self.analog_desclab_df = pd.DataFrame({'Description': desc_analog, 'Label': lab_analog})
-        self.analog_idx = {det: i for i, det in enumerate(list(zip(desc_analog,lab_analog)))}
-        self.fs_analog = self.c3d_data["header"]["analogs"]["frame_rate"]
+        with open(self.c3d_path, 'rb') as f:
 
-        desc_point = self.c3d_data["parameters"]["POINT"]["DESCRIPTIONS"]["value"]
-        lab_point = self.c3d_data["parameters"]["POINT"]["LABELS"]["value"]
-        self.points_idx = {det: i for i, det in enumerate(list(zip(desc_point,lab_point)))}
-        self.fs_points = self.c3d_data["header"]["points"]["frame_rate"]
+            reader = c3d.Reader(f)
+
+            print(f"C3D file opened from path:")
+            print(c3d_path)
+
+            desc_analog = reader.get("ANALOG").get("DESCRIPTIONS").string_array
+            lab_analog = reader.analog_labels
+            self.analog_desclab_df = pd.DataFrame({'Description': desc_analog, 'Label': lab_analog})
+            self.fs_analog = reader.analog_rate
 
         self.accel_df = pd.DataFrame()
         self.force_df = pd.DataFrame()
@@ -49,22 +48,11 @@ class C3DMan:
 
     def extract_accel(
             self,
-            name_mapping: dict[str,tuple[str,str]] = {
-                'a1x': ('Analog Accelerometer::Acceleration [19,1]', 'Acceleration.X'),
-                'a1y': ('Analog Accelerometer::Acceleration [19,2]', 'Acceleration.Y'),
-                'a1z': ('Analog Accelerometer::Acceleration [19,3]', 'Acceleration.Z'),
-                'a2x': ('Analog Accelerometer::Acceleration [20,1]', 'Acceleration.X'),
-                'a2y': ('Analog Accelerometer::Acceleration [20,2]', 'Acceleration.Y'),
-                'a2z': ('Analog Accelerometer::Acceleration [20,3]', 'Acceleration.Z'),
-                'a3x': ('Analog Accelerometer::Acceleration [21,1]', 'Acceleration.X'),
-                'a3y': ('Analog Accelerometer::Acceleration [21,2]', 'Acceleration.Y'),
-                'a3z': ('Analog Accelerometer::Acceleration [21,3]', 'Acceleration.Z'),
-                'a4x': ('Analog Accelerometer::Acceleration [22,1]', 'Acceleration.X'),
-                'a4y': ('Analog Accelerometer::Acceleration [22,2]', 'Acceleration.Y'),
-                'a4z': ('Analog Accelerometer::Acceleration [22,3]', 'Acceleration.Z')
-            }
+            channel_indices: List = list(range(62,74)),
+            channel_names: List = ['a1x', 'a1y', 'a1z', 'a2x', 'a2y', 'a2z', 'a3x', 'a3y', 'a3z', 'a4x', 'a4y', 'a4z']
     ) -> None:
 
+        name_mapping = dict(zip(channel_names, channel_indices))
         self.accel_df = self.extract_analogs(name_mapping)
         if self.accel_df.shape[1] > 0:
             print(f"{self.accel_df.shape[1]} acceleration signals extracted with {self.accel_df.shape[0]} datapoints")
@@ -73,22 +61,11 @@ class C3DMan:
 
     def extract_rawaccel(
             self,
-            name_mapping: dict[str,tuple[str,str]] = {
-                'a1x': ('Generic Analog::Electric Potential [33,1]', 'Electric Potential.X'),
-                'a1y': ('Generic Analog::Electric Potential [33,2]', 'Electric Potential.Y'),
-                'a1z': ('Generic Analog::Electric Potential [33,3]', 'Electric Potential.Z'),
-                'a2x': ('Generic Analog::Electric Potential [34,1]', 'Electric Potential.X'),
-                'a2y': ('Generic Analog::Electric Potential [34,2]', 'Electric Potential.Y'),
-                'a2z': ('Generic Analog::Electric Potential [34,3]', 'Electric Potential.Z'),
-                'a3x': ('Generic Analog::Electric Potential [35,1]', 'Electric Potential.X'),
-                'a3y': ('Generic Analog::Electric Potential [35,2]', 'Electric Potential.Y'),
-                'a3z': ('Generic Analog::Electric Potential [35,3]', 'Electric Potential.Z'),
-                'a4x': ('Generic Analog::Electric Potential [36,1]', 'Electric Potential.X'),
-                'a4y': ('Generic Analog::Electric Potential [36,2]', 'Electric Potential.Y'),
-                'a4z': ('Generic Analog::Electric Potential [36,3]', 'Electric Potential.Z')
-            }
+            channel_indices: List = list(range(62,74)),
+            channel_names: List = ['a1x', 'a1y', 'a1z', 'a2x', 'a2y', 'a2z', 'a3x', 'a3y', 'a3z', 'a4x', 'a4y', 'a4z']
     ) -> None:
 
+        name_mapping = dict(zip(channel_names, channel_indices))
         self.accel_df = self.extract_analogs(name_mapping)
         if self.accel_df.shape[1] > 0:
             print(f"{self.accel_df.shape[1]} raw voltage accelerometer signals extracted with {self.accel_df.shape[0]} datapoints")
@@ -97,18 +74,11 @@ class C3DMan:
     
     def extract_rawforce(
             self,
-            name_mapping: dict[str,tuple[str,str]] = {
-                'fx12': ('Kistler Force Plate 2.0.0.0::Raw [52]', 'Raw.FX12'),
-                'fx34': ('Kistler Force Plate 2.0.0.0::Raw [52]', 'Raw.FX34'),
-                'fy14': ('Kistler Force Plate 2.0.0.0::Raw [52]', 'Raw.FY14'),
-                'fy23': ('Kistler Force Plate 2.0.0.0::Raw [52]', 'Raw.FY23'),
-                'fz1': ('Kistler Force Plate 2.0.0.0::Raw [52]', 'Raw.FZ1'),
-                'fz2': ('Kistler Force Plate 2.0.0.0::Raw [52]', 'Raw.FZ2'),
-                'fz3': ('Kistler Force Plate 2.0.0.0::Raw [52]', 'Raw.FZ3'),
-                'fz4': ('Kistler Force Plate 2.0.0.0::Raw [52]', 'Raw.FZ4')
-            }
+            channel_indices: List = list(range(54,62)),
+            channel_names: List = ['fx12', 'fx34', 'fy14', 'fy23', 'fz1', 'fz2', 'fz3', 'fz4']
     ) -> None:
 
+        name_mapping = dict(zip(channel_names, channel_indices))
         self.force_df = self.extract_analogs(name_mapping)
         if self.force_df.shape[1] > 0:
             print(f"{self.force_df.shape[1]} raw force signals extracted with {self.force_df.shape[0]} datapoints")
@@ -117,11 +87,11 @@ class C3DMan:
 
     def extract_hextrigger(
             self,
-            name_mapping: dict[str,tuple[str,str]] = {
-                'trig': ('Generic Analog::Electric Potential [47,1]', 'Electric Potential.1')
-            }
+            channel_index: int = 74,
+            channel_name: str = 'trig'
     ) -> None:
         
+        name_mapping = {channel_name: channel_index}
         self.hextrigger_df = self.extract_analogs(name_mapping)
         if self.hextrigger_df.shape[1] == 1:
             print(f"Hexapod trigger signal extracted with {self.force_df.shape[0]} datapoints")
@@ -130,11 +100,17 @@ class C3DMan:
 
     def extract_analogs(
             self,
-            name_mapping: dict[str,tuple[str,str]]
+            name_mapping: dict[str,int]
     ) -> pd.DataFrame:
         
-        analogs_idx = [self.analog_idx[q] for q in name_mapping.values()]
-        analogs_data = self.c3d_data["data"]["analogs"][0][analogs_idx]
+        analogs_idx = [q for q in name_mapping.values()]
+
+        analog_chunks = []
+        with open(self.c3d_path, 'rb') as f:
+            reader = c3d.Reader(f)
+            for frame_idx, points, analogs in reader.read_frames():
+                analog_chunks.append(analogs[analogs_idx,:])
+        analogs_data = np.hstack(analog_chunks)
 
         analogs_df = pd.DataFrame()
         analogs_df[list(name_mapping.keys())] = analogs_data.T
@@ -157,7 +133,6 @@ class C3DMan:
         force_segments = []
         i = 0
         num_trigs = 0
-        IPython.embed()
         while i < len(self.hextrigger_df):
             if self.hextrigger_df.iloc[i].values > threshold:
                 num_trigs += 1
@@ -417,10 +392,16 @@ def unpad_unbatch(padded_output: torch.Tensor, lengths: torch.Tensor) -> List[to
 
 if __name__ == "__main__":
 
-    c3d_path = "/Users/rgpieper/Documents/Neurobionics/Hexapod/hexapod-inertial-force-removal/data/noLoadPerts_X050_00.c3d"
-    pertinfo_path = "/Users/rgpieper/Documents/Neurobionics/Hexapod/hexapod-inertial-force-removal/data/axis_queue_X000.csv"
+    # c3d_path = "C:/Users/rgpieper/Documents/Hexapod/hexapod-inertial-force-removal/data/noLoadPerts_X000_00.c3d"
 
-    pertinfo_df = pd.read_csv(pertinfo_path)
+    # with open(c3d_path, 'rb') as f:
+    #     reader = c3d.Reader(f)
+    #     IPython.embed()
+
+
+
+    # pertinfo_path = "C:/Users/rgpieper/Documents/Hexapod/hexapod-inertial-force-removal/data/axis_queue_X000.csv"
+    # pertinfo_df = pd.read_csv(pertinfo_path)
 
     Trial = C3DMan("data/noLoadPerts_X000_00.c3d")
     Trial.print_analog_desclabs()
