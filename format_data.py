@@ -21,7 +21,8 @@ class C3DMan:
 
         desc_analog = self.c3d_data["parameters"]["ANALOG"]["DESCRIPTIONS"]["value"]
         lab_analog = self.c3d_data["parameters"]["ANALOG"]["LABELS"]["value"]
-        self.analogs_idx = {det: i for i, det in enumerate(list(zip(desc_analog,lab_analog)))}
+        self.analog_desclab_df = pd.DataFrame({'Description': desc_analog, 'Label': lab_analog})
+        self.analog_idx = {det: i for i, det in enumerate(list(zip(desc_analog,lab_analog)))}
         self.fs_analog = self.c3d_data["header"]["analogs"]["frame_rate"]
 
         desc_point = self.c3d_data["parameters"]["POINT"]["DESCRIPTIONS"]["value"]
@@ -34,6 +35,16 @@ class C3DMan:
         self.rawforce_df = pd.DataFrame()
         self.hextrigger_df = pd.DataFrame()
         self.fs = self.fs_analog # unless otherwise modified
+
+    def print_analog_desclabs(self) -> None:
+
+        print()
+        print("---------- ANALOG SIGNALS ----------")
+        default_rows = pd.get_option('display.max_rows')
+        pd.set_option('display.max_rows', None)
+        print(self.analog_desclab_df)
+        print()
+        pd.set_option('display.max_rows', default_rows)
 
     def extract_accel(
             self,
@@ -78,14 +89,14 @@ class C3DMan:
     def extract_rawforce(
             self,
             name_mapping: dict[str,tuple[str,str]] = {
-                'fx12': ('Kistler Force Plate 2.0.0.0::Raw [27]', 'Raw.FX12'),
-                'fx34': ('Kistler Force Plate 2.0.0.0::Raw [27]', 'Raw.FX34'),
-                'fy14': ('Kistler Force Plate 2.0.0.0::Raw [27]', 'Raw.FY14'),
-                'fy23': ('Kistler Force Plate 2.0.0.0::Raw [27]', 'Raw.FY23'),
-                'fz1': ('Kistler Force Plate 2.0.0.0::Raw [27]', 'Raw.FZ1'),
-                'fz2': ('Kistler Force Plate 2.0.0.0::Raw [27]', 'Raw.FZ2'),
-                'fz3': ('Kistler Force Plate 2.0.0.0::Raw [27]', 'Raw.FZ3'),
-                'fz4': ('Kistler Force Plate 2.0.0.0::Raw [27]', 'Raw.FZ4')
+                'fx12': ('Kistler Force Plate 2.0.0.0::Raw [52]', 'Raw.FX12'),
+                'fx34': ('Kistler Force Plate 2.0.0.0::Raw [52]', 'Raw.FX34'),
+                'fy14': ('Kistler Force Plate 2.0.0.0::Raw [52]', 'Raw.FY14'),
+                'fy23': ('Kistler Force Plate 2.0.0.0::Raw [52]', 'Raw.FY23'),
+                'fz1': ('Kistler Force Plate 2.0.0.0::Raw [52]', 'Raw.FZ1'),
+                'fz2': ('Kistler Force Plate 2.0.0.0::Raw [52]', 'Raw.FZ2'),
+                'fz3': ('Kistler Force Plate 2.0.0.0::Raw [52]', 'Raw.FZ3'),
+                'fz4': ('Kistler Force Plate 2.0.0.0::Raw [52]', 'Raw.FZ4')
             }
     ) -> None:
 
@@ -105,7 +116,7 @@ class C3DMan:
             name_mapping: dict[str,tuple[str,str]]
     ) -> pd.DataFrame:
         
-        analogs_idx = [self.analogs_idx[q] for q in name_mapping.values()]
+        analogs_idx = [self.analog_idx[q] for q in name_mapping.values()]
         analogs_data = self.c3d_data["data"]["analogs"][0][analogs_idx]
 
         analogs_df = pd.DataFrame()
@@ -356,8 +367,10 @@ def unpad_unbatch(padded_output: torch.Tensor, lengths: torch.Tensor) -> List[to
 if __name__ == "__main__":
 
     TestTrial = C3DMan("data/noLoadPerts_X000_00.c3d")
-    # TestTrial.extract_accel()
-    # TestTrial.extract_rawforce()
+    TestTrial.print_analog_desclabs()
+    TestTrial.extract_rawaccel()
+    TestTrial.extract_rawforce()
+    TestTrial.extract_hextrigger()
 
     # TestTrial.accel_df.to_csv("data/accelerations_unloaded_02.csv", index=False)
     # TestTrial.rawforce_df.to_csv("data/forces_unloaded_02.csv", index=False)
