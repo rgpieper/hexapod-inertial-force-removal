@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "c3d>=0.6.0",
     "ezc3d>=1.5.19",
     "h5py>=3.15.1",
     "ipython>=8.37.0",

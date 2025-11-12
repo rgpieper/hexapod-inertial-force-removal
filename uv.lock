@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.12"
 
 [[package]]
@@ -9,6 +9,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/4a/e7/82da0a03e7ba5141f05cce0d302e6eed121ae055e0456ca228bf693984bc/asttokens-3.0.0.tar.gz", hash = "sha256:0dcd8baa8d62b0c1d118b399b2ddba3c4aff271d0d7a9e0d4c1681c79035bbc7", size = 61978, upload-time = "2024-11-30T04:30:14.439Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/25/8a/c46dcc25341b5bce5472c718902eb3d38600a903b14fa6aeecef3f21a46f/asttokens-3.0.0-py3-none-any.whl", hash = "sha256:e3078351a059199dd5138cb1c706e6430c05eff2ff136af5eb4790f9d28932e2", size = 26918, upload-time = "2024-11-30T04:30:10.946Z" },
+]
+
+[[package]]
+name = "c3d"
+version = "0.6.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/43/52/e292175e9b252daaa5d9533ab88bf56f25ed6401dd16bb1e3bf5cb17c53e/c3d-0.6.0.tar.gz", hash = "sha256:59f94bc243bfe811683abf9d2d2831bf3749a2fe056bbc6a8a5461054eb6c2e5", size = 29778, upload-time = "2025-09-08T15:23:29.259Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/66/f4/90cbc0ae74ad59b00ca163732fa0fe9dad7979f65938f171990653829529/c3d-0.6.0-py3-none-any.whl", hash = "sha256:86928e4bd46aac107b1288981e4fee0daaca7ca24524bef6e890a99b7d1421a4", size = 31316, upload-time = "2025-09-08T15:23:27.832Z" },
 ]
 
 [[package]]
@@ -239,6 +251,7 @@ name = "hexapod-inertial-force-removal"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "c3d" },
     { name = "ezc3d" },
     { name = "h5py" },
     { name = "ipython" },
@@ -254,6 +267,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "c3d", specifier = ">=0.6.0" },
     { name = "ezc3d", specifier = ">=1.5.19" },
     { name = "h5py", specifier = ">=3.15.1" },
     { name = "ipython", specifier = ">=8.37.0" },
