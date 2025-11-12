@@ -30,12 +30,14 @@ class C3DMan:
         self.fs_points = self.c3d_data["header"]["points"]["frame_rate"]
 
         self.accel_df = pd.DataFrame()
+        self.rawaccel_df = pd.DataFrame()
         self.rawforce_df = pd.DataFrame()
+        self.hextrigger_df = pd.DataFrame()
         self.fs = self.fs_analog # unless otherwise modified
 
     def extract_accel(
             self,
-            desc_labs: dict[str,tuple[str,str]] = {
+            name_mapping: dict[str,tuple[str,str]] = {
                 'a1x': ('Analog Accelerometer::Acceleration [19,1]', 'Acceleration.X'),
                 'a1y': ('Analog Accelerometer::Acceleration [19,2]', 'Acceleration.Y'),
                 'a1z': ('Analog Accelerometer::Acceleration [19,3]', 'Acceleration.Z'),
@@ -50,15 +52,32 @@ class C3DMan:
                 'a4z': ('Analog Accelerometer::Acceleration [22,3]', 'Acceleration.Z')
             }
     ) -> None:
-        
-        accel_idx = [self.analogs_idx[q] for q in desc_labs.values()]
-        accel_data = self.c3d_data["data"]["analogs"][0][accel_idx]
 
-        self.accel_df[list(desc_labs.keys())] = accel_data.T
+        self.accel_df = self.extract_analogs(name_mapping)
 
+    def extract_rawaccel(
+            self,
+            name_mapping: dict[str,tuple[str,str]] = {
+                'a1x': ('Generic Analog::Electric Potential [33,1]', 'Electric Potential.X'),
+                'a1y': ('Generic Analog::Electric Potential [33,2]', 'Electric Potential.Y'),
+                'a1z': ('Generic Analog::Electric Potential [33,3]', 'Electric Potential.Z'),
+                'a2x': ('Generic Analog::Electric Potential [34,1]', 'Electric Potential.X'),
+                'a2y': ('Generic Analog::Electric Potential [34,2]', 'Electric Potential.Y'),
+                'a2z': ('Generic Analog::Electric Potential [34,3]', 'Electric Potential.Z'),
+                'a3x': ('Generic Analog::Electric Potential [35,1]', 'Electric Potential.X'),
+                'a3y': ('Generic Analog::Electric Potential [35,2]', 'Electric Potential.Y'),
+                'a3z': ('Generic Analog::Electric Potential [35,3]', 'Electric Potential.Z'),
+                'a4x': ('Generic Analog::Electric Potential [36,1]', 'Electric Potential.X'),
+                'a4y': ('Generic Analog::Electric Potential [36,2]', 'Electric Potential.Y'),
+                'a4z': ('Generic Analog::Electric Potential [36,3]', 'Electric Potential.Z')
+            }
+    ) -> None:
+
+        self.rawaccel_df = self.extract_analogs(name_mapping)
+    
     def extract_rawforce(
             self,
-            desc_labs: dict[str,tuple[str,str]] = {
+            name_mapping: dict[str,tuple[str,str]] = {
                 'fx12': ('Kistler Force Plate 2.0.0.0::Raw [27]', 'Raw.FX12'),
                 'fx34': ('Kistler Force Plate 2.0.0.0::Raw [27]', 'Raw.FX34'),
                 'fy14': ('Kistler Force Plate 2.0.0.0::Raw [27]', 'Raw.FY14'),
@@ -69,11 +88,30 @@ class C3DMan:
                 'fz4': ('Kistler Force Plate 2.0.0.0::Raw [27]', 'Raw.FZ4')
             }
     ) -> None:
-        
-        rawforce_idx = [self.analogs_idx[q] for q in desc_labs.values()]
-        rawforce_data = self.c3d_data["data"]["analogs"][0][rawforce_idx]
 
-        self.rawforce_df[list(desc_labs.keys())] = rawforce_data.T
+        self.rawforce_df = self.extract_analogs(name_mapping)
+
+    def extract_hextrigger(
+            self,
+            name_mapping: dict[str,tuple[str,str]] = {
+                'trig': ('Generic Analog::Electric Potential [47,1]', 'Electric Potential.1')
+            }
+    ) -> None:
+        
+        self.hextrigger_df = self.extract_analogs(name_mapping)
+
+    def extract_analogs(
+            self,
+            name_mapping: dict[str,tuple[str,str]]
+    ) -> pd.DataFrame:
+        
+        analogs_idx = [self.analogs_idx[q] for q in name_mapping.values()]
+        analogs_data = self.c3d_data["data"]["analogs"][0][analogs_idx]
+
+        analogs_df = pd.DataFrame()
+        analogs_df[list(name_mapping.keys())] = analogs_data.T
+
+        return analogs_df
 
     def segment_trainperts(
             self,
@@ -317,9 +355,9 @@ def unpad_unbatch(padded_output: torch.Tensor, lengths: torch.Tensor) -> List[to
 
 if __name__ == "__main__":
 
-    TestTrial = C3DMan("data/fullgrid_unloaded_02.c3d")
-    TestTrial.extract_accel()
-    TestTrial.extract_rawforce()
+    TestTrial = C3DMan("data/noLoadPerts_X000_00.c3d")
+    # TestTrial.extract_accel()
+    # TestTrial.extract_rawforce()
 
     # TestTrial.accel_df.to_csv("data/accelerations_unloaded_02.csv", index=False)
     # TestTrial.rawforce_df.to_csv("data/forces_unloaded_02.csv", index=False)
