@@ -2,6 +2,7 @@
 
 import ezc3d
 import c3d
+import h5py
 import numpy as np
 import numpy.typing as npt
 from typing import Type, List, Tuple, Optional, Any, Dict
@@ -395,11 +396,68 @@ def unpad_unbatch(padded_output: torch.Tensor, lengths: torch.Tensor) -> List[to
 
     return unpadded_segments
 
+def save_labeled_perts_h5(savepath: str, accel_segs: List[npt.ArrayLike], force_segs: List[npt.ArrayLike], meta_data: List[npt.ArrayLike]) -> None:
+
+    assert len(accel_segs) == len(force_segs) == len(meta_data)
+
+    with h5py.File(savepath, 'w') as f:
+
+        for i, (dir, axis_x, axis_z) in enumerate(meta_data):
+
+            grp = f.create_group(f"pert_{i:05d}")
+            grp.create_dataset("accel", data=accel_segs[i])
+            grp.create_dataset("force", data=force_segs[i])
+            grp.attrs["dir"] = dir
+            grp.attrs["axis_x"] = axis_x
+            grp.attrs["axis_z"] = axis_z
+    
+    print(f"Saved {len(meta_data)} perturbations to:")
+    print(savepath)
+
+def load_perts_h5(
+        filepath: str,
+        dirs: Optional[List[int]] = None,
+        x_axes: Optional[List[int]] = None,
+        z_axes: Optional[List[int]] = None,
+) -> Tuple[List[npt.NDArray], List[npt.NDArray], List[Dict]]:
+    
+    meta_data = []
+    accel_segs = []
+    force_segs = []
+
+    with h5py.File(filepath, 'r') as f:
+
+        for pert_name in f.keys():
+
+            grp = f[pert_name]
+
+            if (
+                (dirs is None or grp.attrs["dir"] in dirs) and
+                (x_axes is None or grp.attrs["x_axis"] in x_axes) and
+                (z_axes is None or grp.attrs["z_axis"] in z_axes)
+            ):
+                
+                meta_data.append({
+                    "name": pert_name,
+                    "dir": grp.attrs["dir"],
+                    "x_axis": grp.attrs["x_axis"],
+                    "z_axis": grp.attrs["z_axis"]
+                })
+                accel_segs.append(grp["accel"][()])
+                force_segs.append(grp["force_segs"][()])
+    
+    print(f"Loaded {len(meta_data)} perturbations from:")
+    print(filepath)
+
+    return accel_segs, force_segs, meta_data
+
 if __name__ == "__main__":
 
     pertinfo_path = "data/axis_queue_X000.csv"
     pertinfo_df = pd.read_csv(pertinfo_path)
     print(pertinfo_df.head)
+
+    IPython.embed()
 
     c3d_path = "data/noLoadPerts_X000_01.c3d"
     Trial = C3DMan(c3d_path)
