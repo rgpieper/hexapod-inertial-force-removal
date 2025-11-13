@@ -8,7 +8,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
-from format_data import WindowedSequences, SegmentedSequences, C3DMan, sequence_collate_fn, get_loader
+from format_data import WindowedSequences, VariableLengthSequences, C3DMan, sequence_collate_fn, get_loader
 from cnnlstm_model import calc_standardization_stats
 from mlp_model import calc_avg_vaf
 import IPython
@@ -116,7 +116,7 @@ class MIMOFIR(nn.Module):
             train_sequence_loader = get_loader(
                 input_arrays=train_inputs,
                 target_arrays=train_targets,
-                dataset_class=SegmentedSequences,
+                dataset_class=VariableLengthSequences,
                 batch_size=1,
                 shuffle=True,
                 collate_fn=sequence_collate_fn
@@ -126,7 +126,7 @@ class MIMOFIR(nn.Module):
             val_sequence_loader = get_loader(
                 input_arrays=val_inputs,
                 target_arrays=val_targets,
-                dataset_class=SegmentedSequences,
+                dataset_class=VariableLengthSequences,
                 batch_size=1,
                 shuffle=False,
                 collate_fn=sequence_collate_fn
@@ -178,7 +178,7 @@ class MIMOFIR(nn.Module):
         train_sequence_loader = get_loader(
             input_arrays=train_inputs,
             target_arrays=train_targets,
-            dataset_class=SegmentedSequences,
+            dataset_class=VariableLengthSequences,
             batch_size=1,
             shuffle=True,
             collate_fn=sequence_collate_fn
@@ -188,7 +188,7 @@ class MIMOFIR(nn.Module):
         val_sequence_loader = get_loader(
             input_arrays=val_inputs,
             target_arrays=val_targets,
-            dataset_class=SegmentedSequences,
+            dataset_class=VariableLengthSequences,
             batch_size=1,
             shuffle=False,
             collate_fn=sequence_collate_fn
@@ -308,10 +308,10 @@ if __name__ == "__main__":
     accel_segments = []
     force_segments = []
     for Set in C3D_datasets:
-        Set.extract_accel()
+        Set.extract_rawaccel()
         Set.extract_rawforce()
-        accel_segments.append(Set.accel_df.values)
-        force_segments.append(Set.force_df.values)
+        accel_segments.append(Set.rawaccel_df.values)
+        force_segments.append(Set.rawforce_df.values)
 
     print("Segments compiled!")
 

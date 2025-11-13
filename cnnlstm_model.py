@@ -8,7 +8,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
-from format_data import C3DMan, SegmentedSequences, sequence_collate_fn, unpad_unbatch
+from format_data import C3DMan, VariableLengthSequences, sequence_collate_fn, unpad_unbatch
 from mlp_model import calc_avg_vaf
 
 class MIMOCNNLSTM(nn.Module):
@@ -283,7 +283,7 @@ if __name__ == "__main__":
     accel_segments = []
     force_segments = []
     for Set in C3D_datasets:
-        Set.extract_accel()
+        Set.extract_rawaccel()
         Set.extract_rawforce()
         accel_segs, rawforce_segs = Set.segment_perts_accelthresh(t_segment = 1.15, threshold=1.0)
         accel_segments.extend(accel_segs)
@@ -320,12 +320,12 @@ if __name__ == "__main__":
     )
 
     # create datasets
-    train_dataset = SegmentedSequences(
+    train_dataset = VariableLengthSequences(
         input_arrays=train_accel_segments,
         target_arrays=train_force_segments
     )
 
-    val_dataset = SegmentedSequences(
+    val_dataset = VariableLengthSequences(
         input_arrays=val_accel_segments,
         target_arrays=val_force_segments
     )

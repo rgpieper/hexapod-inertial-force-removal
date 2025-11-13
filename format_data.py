@@ -32,7 +32,8 @@ class C3DMan:
             self.fs_analog = reader.analog_rate
 
         self.accel_df = pd.DataFrame()
-        self.force_df = pd.DataFrame()
+        self.rawaccel_df = pd.DataFrame()
+        self.rawforce_df = pd.DataFrame()
         self.hextrigger_df = pd.DataFrame()
         self.fs = self.fs_analog # unless otherwise modified
 
@@ -46,12 +47,13 @@ class C3DMan:
         print()
         pd.set_option('display.max_rows', default_rows)
 
-    def extract_accel(
+    def extract_convert_accel(
             self,
-            channel_indices: List = list(range(62,74)),
+            channel_indices: List,
             channel_names: List = ['a1x', 'a1y', 'a1z', 'a2x', 'a2y', 'a2z', 'a3x', 'a3y', 'a3z', 'a4x', 'a4y', 'a4z']
     ) -> None:
 
+        assert len(channel_indices) == len(channel_names), f"Number of channel indices ({len(channel_indices)}) does not match number of names ({len(channel_names)})"
         name_mapping = dict(zip(channel_names, channel_indices))
         self.accel_df = self.extract_analogs(name_mapping)
         if self.accel_df.shape[1] > 0:
@@ -61,40 +63,43 @@ class C3DMan:
 
     def extract_rawaccel(
             self,
-            channel_indices: List = list(range(62,74)),
+            channel_indices: List,
             channel_names: List = ['a1x', 'a1y', 'a1z', 'a2x', 'a2y', 'a2z', 'a3x', 'a3y', 'a3z', 'a4x', 'a4y', 'a4z']
     ) -> None:
 
+        assert len(channel_indices) == len(channel_names), f"Number of channel indices ({len(channel_indices)}) does not match number of names ({len(channel_names)})"
         name_mapping = dict(zip(channel_names, channel_indices))
-        self.accel_df = self.extract_analogs(name_mapping)
-        if self.accel_df.shape[1] > 0:
-            print(f"{self.accel_df.shape[1]} raw voltage accelerometer signals extracted with {self.accel_df.shape[0]} datapoints")
+        self.rawaccel_df = self.extract_analogs(name_mapping)
+
+        if self.rawaccel_df.shape[1] > 0:
+            print(f"{self.rawaccel_df.shape[1]} raw voltage accelerometer signals extracted with {self.rawaccel_df.shape[0]} datapoints")
         else:
             print(f"ERROR: No raw voltage accelerometer signals found")
     
     def extract_rawforce(
             self,
-            channel_indices: List = list(range(54,62)),
+            channel_indices: List,
             channel_names: List = ['fx12', 'fx34', 'fy14', 'fy23', 'fz1', 'fz2', 'fz3', 'fz4']
     ) -> None:
 
+        assert len(channel_indices) == len(channel_names), f"Number of channel indices ({len(channel_indices)}) does not match number of names ({len(channel_names)})"
         name_mapping = dict(zip(channel_names, channel_indices))
-        self.force_df = self.extract_analogs(name_mapping)
-        if self.force_df.shape[1] > 0:
-            print(f"{self.force_df.shape[1]} raw force signals extracted with {self.force_df.shape[0]} datapoints")
+        self.rawforce_df = self.extract_analogs(name_mapping)
+        if self.rawforce_df.shape[1] > 0:
+            print(f"{self.rawforce_df.shape[1]} raw force signals extracted with {self.rawforce_df.shape[0]} datapoints")
         else:
             print(f"ERROR: No raw force signals found")
 
     def extract_hextrigger(
             self,
-            channel_index: int = 74,
+            channel_index: int,
             channel_name: str = 'trig'
     ) -> None:
         
         name_mapping = {channel_name: channel_index}
         self.hextrigger_df = self.extract_analogs(name_mapping)
         if self.hextrigger_df.shape[1] == 1:
-            print(f"Hexapod trigger signal extracted with {self.force_df.shape[0]} datapoints")
+            print(f"Hexapod trigger signal extracted with {self.rawforce_df.shape[0]} datapoints")
         else:
             print(f"ERROR: Expected 1 hexapod trigger signal, found {self.hextrigger_df.shape[1]}")
 
@@ -138,9 +143,9 @@ class C3DMan:
                 num_trigs += 1
                 i_start = i - n_buffer if i - n_buffer > 0 else 0
                 i_end = i_start + n_segment if i_start + n_segment < len(self.hextrigger_df) else len(self.hextrigger_df)
-                accel_seg = self.accel_df.iloc[i_start:i_end].values
+                accel_seg = self.rawaccel_df.iloc[i_start:i_end].values
                 accel_segments.append(accel_seg)
-                force_seg = self.force_df.iloc[i_start:i_end].values
+                force_seg = self.rawforce_df.iloc[i_start:i_end].values
                 force_segments.append(force_seg)
                 i += n_timeout
             else:
@@ -164,10 +169,10 @@ class C3DMan:
         
         a_norms = pd.DataFrame()
         
-        a_norms["a1n"] = np.linalg.norm(self.accel_df[["a1x", "a1y", "a1z"]].values, axis=1) # accelerometer 1
-        a_norms["a2n"] = np.linalg.norm(self.accel_df[["a2x", "a2y", "a2z"]].values, axis=1) # accelerometer 2
-        a_norms["a3n"] = np.linalg.norm(self.accel_df[["a3x", "a3y", "a3z"]].values, axis=1) # accelerometer 3
-        a_norms["a4n"] = np.linalg.norm(self.accel_df[["a4x", "a4y", "a4z"]].values, axis=1) # accelerometer 4
+        a_norms["a1n"] = np.linalg.norm(self.rawaccel_df[["a1x", "a1y", "a1z"]].values, axis=1) # accelerometer 1
+        a_norms["a2n"] = np.linalg.norm(self.rawaccel_df[["a2x", "a2y", "a2z"]].values, axis=1) # accelerometer 2
+        a_norms["a3n"] = np.linalg.norm(self.rawaccel_df[["a3x", "a3y", "a3z"]].values, axis=1) # accelerometer 3
+        a_norms["a4n"] = np.linalg.norm(self.rawaccel_df[["a4x", "a4y", "a4z"]].values, axis=1) # accelerometer 4
 
         a_base = a_norms.iloc[0:n_base].mean()
 
@@ -178,9 +183,9 @@ class C3DMan:
             if any(abs(a_norms.iloc[i] - a_base) > threshold):
                 i_start = i-n_buffer if i-n_buffer > 0 else 0
                 i_next = i_start+n_segment if i_start+n_segment < len(a_norms) else len(a_norms)
-                accel_seg = self.accel_df.iloc[i_start:i_next].values
+                accel_seg = self.rawaccel_df.iloc[i_start:i_next].values
                 accel_segments.append(accel_seg)
-                force_seg = self.force_df.iloc[i_start:i_next].values
+                force_seg = self.rawforce_df.iloc[i_start:i_next].values
                 force_segments.append(force_seg)
                 i = i_next
             else:
@@ -306,7 +311,7 @@ class FlattenedWindows(Dataset):
             
         return output_tensors
     
-class SegmentedSequences(Dataset):
+class VariableLengthSequences(Dataset):
     def __init__(
             self,
             input_arrays: List[npt.ArrayLike],
@@ -392,22 +397,16 @@ def unpad_unbatch(padded_output: torch.Tensor, lengths: torch.Tensor) -> List[to
 
 if __name__ == "__main__":
 
-    # c3d_path = "C:/Users/rgpieper/Documents/Hexapod/hexapod-inertial-force-removal/data/noLoadPerts_X000_00.c3d"
+    pertinfo_path = "data/axis_queue_X000.csv"
+    pertinfo_df = pd.read_csv(pertinfo_path)
+    print(pertinfo_df.head)
 
-    # with open(c3d_path, 'rb') as f:
-    #     reader = c3d.Reader(f)
-    #     IPython.embed()
-
-
-
-    # pertinfo_path = "C:/Users/rgpieper/Documents/Hexapod/hexapod-inertial-force-removal/data/axis_queue_X000.csv"
-    # pertinfo_df = pd.read_csv(pertinfo_path)
-
-    Trial = C3DMan("data/noLoadPerts_X000_00.c3d")
-    Trial.print_analog_desclabs()
-    Trial.extract_rawaccel()
-    Trial.extract_rawforce()
-    Trial.extract_hextrigger()
+    c3d_path = "data/noLoadPerts_X000_01.c3d"
+    Trial = C3DMan(c3d_path)
+    # Trial.print_analog_desclabs()
+    Trial.extract_rawaccel(channel_indices=list(range(62,74)))
+    Trial.extract_rawforce(channel_indices=list(range(54,62)))
+    Trial.extract_hextrigger(channel_index=74)
     accel_segs, force_segs = Trial.segment_perts_trigger(t_segment=1.3, t_timeout=1.0)
 
-    IPython.embed()
+    # IPython.embed()
