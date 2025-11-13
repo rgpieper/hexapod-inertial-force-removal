@@ -396,7 +396,7 @@ def unpad_unbatch(padded_output: torch.Tensor, lengths: torch.Tensor) -> List[to
 
     return unpadded_segments
 
-def save_labeled_perts_h5(savepath: str, accel_segs: List[npt.ArrayLike], force_segs: List[npt.ArrayLike], meta_data: List[npt.ArrayLike]) -> None:
+def save_labeled_perts_h5(savepath: str, accel_segs: List[npt.ArrayLike], force_segs: List[npt.ArrayLike], meta_data: List[List[int]]) -> None:
 
     assert len(accel_segs) == len(force_segs) == len(meta_data)
 
@@ -417,8 +417,8 @@ def save_labeled_perts_h5(savepath: str, accel_segs: List[npt.ArrayLike], force_
 def load_perts_h5(
         filepath: str,
         dirs: Optional[List[int]] = None,
-        x_axes: Optional[List[int]] = None,
-        z_axes: Optional[List[int]] = None,
+        axes_x: Optional[List[int]] = None,
+        axes_z: Optional[List[int]] = None,
 ) -> Tuple[List[npt.NDArray], List[npt.NDArray], List[Dict]]:
     
     meta_data = []
@@ -433,18 +433,18 @@ def load_perts_h5(
 
             if (
                 (dirs is None or grp.attrs["dir"] in dirs) and
-                (x_axes is None or grp.attrs["x_axis"] in x_axes) and
-                (z_axes is None or grp.attrs["z_axis"] in z_axes)
+                (axes_x is None or grp.attrs["axis_x"] in axes_x) and
+                (axes_z is None or grp.attrs["axis_z"] in axes_z)
             ):
                 
                 meta_data.append({
                     "name": pert_name,
                     "dir": grp.attrs["dir"],
-                    "x_axis": grp.attrs["x_axis"],
-                    "z_axis": grp.attrs["z_axis"]
+                    "axis_x": grp.attrs["axis_x"],
+                    "axis_z": grp.attrs["axis_z"]
                 })
                 accel_segs.append(grp["accel"][()])
-                force_segs.append(grp["force_segs"][()])
+                force_segs.append(grp["force"][()])
     
     print(f"Loaded {len(meta_data)} perturbations from:")
     print(filepath)
@@ -453,18 +453,52 @@ def load_perts_h5(
 
 if __name__ == "__main__":
 
-    pertinfo_path = "data/axis_queue_X000.csv"
-    pertinfo_df = pd.read_csv(pertinfo_path)
-    print(pertinfo_df.head)
+    h5_filepath = "data/noLoadPerts_131125.h5"
+
+    accel_segs, force_segs, meta_data = load_perts_h5(h5_filepath)
 
     IPython.embed()
 
-    c3d_path = "data/noLoadPerts_X000_01.c3d"
-    Trial = C3DMan(c3d_path)
-    # Trial.print_analog_desclabs()
-    Trial.extract_rawaccel(channel_indices=list(range(62,74)))
-    Trial.extract_rawforce(channel_indices=list(range(54,62)))
-    Trial.extract_hextrigger(channel_index=74)
-    accel_segs, force_segs = Trial.segment_perts_trigger(t_segment=1.3, t_timeout=1.0)
+    # file_pairs = [
+    #     ("data/axis_queue_X000.csv", "data/noLoadPerts_X000_01.c3d"),
+    #     ("data/axis_queue_X050.csv", "data/noLoadPerts_X050_01.c3d"),
+    #     ("data/axis_queue_X100.csv", "data/noLoadPerts_X100_01.c3d"),
+    #     ("data/axis_queue_X150.csv", "data/noLoadPerts_X150_01.c3d"),
+    #     ("data/axis_queue_X200.csv", "data/noLoadPerts_X200_01.c3d")
+    # ]
+
+    # meta_data = []
+    # accel_segs = []
+    # force_segs = []
+
+    # for queue_file, c3d_file in file_pairs:
+
+    #     meta_data.extend(pd.read_csv(queue_file).to_numpy().tolist())
+
+    #     Capture = C3DMan(c3d_file)
+    #     Capture.extract_rawaccel(channel_indices=list(range(62,74)))
+    #     Capture.extract_rawforce(channel_indices=list(range(54,62)))
+    #     Capture.extract_hextrigger(channel_index=74)
+    #     capture_accel_segs, capture_force_segs = Capture.segment_perts_trigger(t_segment=1.3, t_timeout=1.0)
+    #     accel_segs.extend(capture_accel_segs)
+    #     force_segs.extend(capture_force_segs)
+
+
+
+    # save_labeled_perts_h5(h5_filepath, accel_segs, force_segs, meta_data)
+
+    # pertinfo_path = "data/axis_queue_X000.csv"
+    # pertinfo_df = pd.read_csv(pertinfo_path)
+    # print(pertinfo_df.head)
+
+    # IPython.embed()
+
+    # c3d_path = "data/noLoadPerts_X000_01.c3d"
+    # Trial = C3DMan(c3d_path)
+    # # Trial.print_analog_desclabs()
+    # Trial.extract_rawaccel(channel_indices=list(range(62,74)))
+    # Trial.extract_rawforce(channel_indices=list(range(54,62)))
+    # Trial.extract_hextrigger(channel_index=74)
+    # accel_segs, force_segs = Trial.segment_perts_trigger(t_segment=1.3, t_timeout=1.0)
 
     # IPython.embed()
