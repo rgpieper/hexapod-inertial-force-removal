@@ -5,13 +5,24 @@ import c3d
 import h5py
 import numpy as np
 import numpy.typing as npt
-from typing import Type, List, Tuple, Optional, Any, Dict
+from typing import Type, List, Tuple, Optional, Any, Dict, TypedDict
 import math
 import pandas as pd
 import torch
 from torch.utils.data import Dataset, DataLoader
 import IPython
 import matplotlib.pyplot as plt
+
+class GenAnalogParams(TypedDict):
+    gain: float
+    zero_level: float
+    scaling_factor: float
+
+class AccelerometerParams(TypedDict):
+    gain: float
+    zero_level: float
+    sensitivity: float
+    amplifier_gain: float
 
 # NOTE: Nexus graph depicts first analog datapoint to align with frame 1 and datapoint 5 aligning with frame 2
 
@@ -32,7 +43,6 @@ class C3DMan:
             self.analog_desclab_df = pd.DataFrame({'Description': desc_analog, 'Label': lab_analog})
             self.fs_analog = reader.analog_rate
 
-        self.accel_df = pd.DataFrame()
         self.rawaccel_df = pd.DataFrame()
         self.rawforce_df = pd.DataFrame()
         self.hextrigger_df = pd.DataFrame()
@@ -50,22 +60,36 @@ class C3DMan:
 
     def extract_convert_accel(
             self,
-            channel_indices: List,
-            channel_names: List = ['a1x', 'a1y', 'a1z', 'a2x', 'a2y', 'a2z', 'a3x', 'a3y', 'a3z', 'a4x', 'a4y', 'a4z']
+            channel_indices: List[int],
+            channel_names: List[str] = ['a1x', 'a1y', 'a1z', 'a2x', 'a2y', 'a2z', 'a3x', 'a3y', 'a3z', 'a4x', 'a4y', 'a4z'],
+            gen_params: GenAnalogParams = {
+                "gain": 5.00, # V
+                "zero_level": 0.0,
+                "scaling_factor": 1.0 # V
+            },
+            acc_params: AccelerometerParams = {
+                "gain": 5.00, # V
+                "zero_level": 2.5,
+                "sensitivity": 1000.0, # mV/g
+                "amplifier_gain": 1.0 # V
+            }
     ) -> None:
 
         assert len(channel_indices) == len(channel_names), f"Number of channel indices ({len(channel_indices)}) does not match number of names ({len(channel_names)})"
         name_mapping = dict(zip(channel_names, channel_indices))
-        self.accel_df = self.extract_analogs(name_mapping)
-        if self.accel_df.shape[1] > 0:
-            print(f"{self.accel_df.shape[1]} acceleration signals extracted with {self.accel_df.shape[0]} datapoints")
+        accel_df = self.extract_analogs(name_mapping)
+        if accel_df.shape[1] > 0:
+            print(f"{accel_df.shape[1]} acceleration signals extracted with {accel_df.shape[0]} datapoints")
         else:
             print(f"ERROR: No acceleration signals found")
 
+        self.rawaccel_df = ((accel_df*(acc_params["sensitivity"]/1000.0)/acc_params["amplifier_gain"] + acc_params["zero_level"])*acc_params["gain"]/gen_params["gain"] - gen_params["zero_level"])*gen_params["scaling_factor"]
+        print("Acceleration signals converted to raw electric potential.")
+
     def extract_rawaccel(
             self,
-            channel_indices: List,
-            channel_names: List = ['a1x', 'a1y', 'a1z', 'a2x', 'a2y', 'a2z', 'a3x', 'a3y', 'a3z', 'a4x', 'a4y', 'a4z']
+            channel_indices: List[int],
+            channel_names: List[str] = ['a1x', 'a1y', 'a1z', 'a2x', 'a2y', 'a2z', 'a3x', 'a3y', 'a3z', 'a4x', 'a4y', 'a4z']
     ) -> None:
 
         assert len(channel_indices) == len(channel_names), f"Number of channel indices ({len(channel_indices)}) does not match number of names ({len(channel_names)})"
@@ -79,8 +103,8 @@ class C3DMan:
     
     def extract_rawforce(
             self,
-            channel_indices: List,
-            channel_names: List = ['fx12', 'fx34', 'fy14', 'fy23', 'fz1', 'fz2', 'fz3', 'fz4']
+            channel_indices: List[int],
+            channel_names: List[str] = ['fx12', 'fx34', 'fy14', 'fy23', 'fz1', 'fz2', 'fz3', 'fz4']
     ) -> None:
 
         assert len(channel_indices) == len(channel_names), f"Number of channel indices ({len(channel_indices)}) does not match number of names ({len(channel_names)})"
