@@ -269,7 +269,7 @@ class WindowedSequences(Dataset):
         
     def restructure_windowed_output(self, indexed_windows: List[Tuple[int, torch.Tensor]]) -> List[torch.Tensor]:
         
-        num_output_chans = indexed_windows[0][1].numel()
+        num_output_chans = indexed_windows[0][1].shape[1]
         output_tensors = [torch.zeros(in_tens.shape[0], num_output_chans) for in_tens in self.input_tensors]
         summed_window_segments = [torch.zeros(in_tens.shape[0], num_output_chans) for in_tens in self.input_tensors]
         prediction_counts = [torch.zeros(in_tens.shape[0]) for in_tens in self.input_tensors]

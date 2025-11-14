@@ -231,7 +231,7 @@ if __name__ == "__main__":
     )
 
     # create dataloaders
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    train_loader = DataLoader(train_dataset, batch_size=256, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=1, shuffle=False) # batch size 1 for sequence reconstruction
 
     Model = MIMOLSTM(
