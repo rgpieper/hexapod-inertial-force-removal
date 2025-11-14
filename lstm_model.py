@@ -246,6 +246,7 @@ if __name__ == "__main__":
     vaf_saved = Model.train_val_save(
         train_loader=train_loader,
         val_loader=val_loader,
+        val_dataset=val_dataset,
         optimizer=torch.optim.Adam(Model.parameters(), lr=learning_rate),
         num_epochs=num_epochs,
         device=device,
