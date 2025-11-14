@@ -130,7 +130,10 @@ class MIMOLSTM(nn.Module):
 
             indexed_outputs = []
             with torch.no_grad():
-                for batch_idx, (inputs, targets) in enumerate(val_loader):
+
+                val_loop = tqdm(enumerate(val_loader), desc=f"Validation", leave=False)
+
+                for batch_idx, (inputs, targets) in val_loop:
                     inputs, targets = inputs.to(device), targets.to(device)
 
                     outputs = self(inputs)
@@ -231,7 +234,7 @@ if __name__ == "__main__":
     )
 
     # create dataloaders
-    train_loader = DataLoader(train_dataset, batch_size=256, shuffle=True)
+    train_loader = DataLoader(train_dataset, batch_size=256, shuffle=True) # increase batch size for general model
     val_loader = DataLoader(val_dataset, batch_size=1, shuffle=False) # batch size 1 for sequence reconstruction
 
     Model = MIMOLSTM(
