@@ -185,13 +185,86 @@ if __name__ == "__main__":
 
     data_file = "data/noLoadPerts_131125.h5"
 
+    model_info_list = []
+
+    ### TRAIN GENERAL MODEL WITH ALL PERTS
+
+    filename = f"mlp_general.pth"
+    savepath = os.path.join(savefolder, filename)
+
+    accel_segs, force_segs, meta_data = load_perts_h5(data_file)
+
+    # split segments for training / validation
+    train_pairs, val_pairs = train_test_split(
+        list(zip(accel_segs, force_segs)),
+        test_size=1.0-train_ratio,
+        random_state=42 # seed for reproducibility
+    )
+    train_accel_segments, train_force_segments = zip(*train_pairs)
+    val_accel_segments, val_force_segments = zip(*val_pairs)
+
+    # compute standardization stats on training data
+    input_stats, output_stats = calc_standardization_stats(train_accel_segments, train_force_segments)
+    flat_input_stats = (np.tile(input_stats[0], window_size), np.tile(input_stats[1], window_size))
+    flat_output_stats = (np.tile(output_stats[0], window_size), np.tile(output_stats[1], window_size))
+
+    # create datasets
+    train_dataset = FlattenedWindows(
+        input_arrays=list(train_accel_segments),
+        target_arrays=list(train_force_segments),
+        window_size=window_size,
+        step_size=step_size
+    )
+
+    val_dataset = FlattenedWindows(
+        input_arrays=list(val_accel_segments),
+        target_arrays=list(val_force_segments),
+        window_size=window_size,
+        step_size=step_size
+    )
+
+    # create dataloaders
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=1, shuffle=False) # batch size 1 for sequence reconstruction
+
+    # instantiate model
+    Model = BasicMLP(
+        input_dim=input_dim,
+        output_dim=output_dim,
+        input_stats=flat_input_stats,
+        output_stats=flat_output_stats
+    )
+    Model.to(device)
+
+    # train the model
+    vaf_saved = Model.train_val_save(
+        train_loader=train_loader,
+        val_loader=val_loader,
+        val_dataset=val_dataset,
+        optimizer=torch.optim.Adam(Model.parameters(), lr=learning_rate),
+        num_epochs=num_epochs,
+        device=device,
+        save_path=savepath
+    )
+
+    model_info_list.append({
+        "filename": filename,
+        "axis_x": "all",
+        "axis_z": "all",
+        "dir": "both",
+        "vaf": vaf_saved
+    })
+    
+    model_info_df = pd.DataFrame(model_info_list)
+    model_info_df.to_csv(os.path.join(savefolder, "mlp_model_info.csv"), index=False)
+    
+    ### TRAIN MODEL FOR EACH PERTURBATION TYPE
+    
     axes_x = [0, 50, 100, 150, 200]
     axes_z = [63, 67, 70, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 93, 96, 100]
     dirs = [-1, 1]
 
     dir_str = {1: "forward", -1: "reverse"}
-
-    model_info_list = []
 
     for x in axes_x:
 
@@ -264,74 +337,3 @@ if __name__ == "__main__":
                     "dir": dir,
                     "vaf": vaf_saved
                 })
-
-    ### TRAIN FINAL, GENERAL MODEL WITH ALL PERTS
-
-    filename = f"mlp_general.pth"
-    savepath = os.path.join(savefolder, filename)
-
-    accel_segs, force_segs, meta_data = load_perts_h5(data_file)
-
-    # split segments for training / validation
-    train_pairs, val_pairs = train_test_split(
-        list(zip(accel_segs, force_segs)),
-        test_size=1.0-train_ratio,
-        random_state=42 # seed for reproducibility
-    )
-    train_accel_segments, train_force_segments = zip(*train_pairs)
-    val_accel_segments, val_force_segments = zip(*val_pairs)
-
-    # compute standardization stats on training data
-    input_stats, output_stats = calc_standardization_stats(train_accel_segments, train_force_segments)
-    flat_input_stats = (np.tile(input_stats[0], window_size), np.tile(input_stats[1], window_size))
-    flat_output_stats = (np.tile(output_stats[0], window_size), np.tile(output_stats[1], window_size))
-
-    # create datasets
-    train_dataset = FlattenedWindows(
-        input_arrays=list(train_accel_segments),
-        target_arrays=list(train_force_segments),
-        window_size=window_size,
-        step_size=step_size
-    )
-
-    val_dataset = FlattenedWindows(
-        input_arrays=list(val_accel_segments),
-        target_arrays=list(val_force_segments),
-        window_size=window_size,
-        step_size=step_size
-    )
-
-    # create dataloaders
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=1, shuffle=False) # batch size 1 for sequence reconstruction
-
-    # instantiate model
-    Model = BasicMLP(
-        input_dim=input_dim,
-        output_dim=output_dim,
-        input_stats=flat_input_stats,
-        output_stats=flat_output_stats
-    )
-    Model.to(device)
-
-    # train the model
-    vaf_saved = Model.train_val_save(
-        train_loader=train_loader,
-        val_loader=val_loader,
-        val_dataset=val_dataset,
-        optimizer=torch.optim.Adam(Model.parameters(), lr=learning_rate),
-        num_epochs=num_epochs,
-        device=device,
-        save_path=savepath
-    )
-
-    model_info_list.append({
-        "filename": filename,
-        "axis_x": "all",
-        "axis_z": "all",
-        "dir": "both",
-        "vaf": vaf_saved
-    })
-    
-    model_info_df = pd.DataFrame(model_info_list)
-    model_info_df.to_csv(os.path.join(savefolder, "mlp_model_info.csv"), index=False)
