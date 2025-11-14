@@ -194,6 +194,7 @@ if __name__ == "__main__":
 
     # device setup
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") # on Anton, 2 GPUs: cuda:0, cuda:1
+    print(f"Using {device}.")
 
     data_file = "data/noLoadPerts_131125.h5"
 
@@ -250,7 +251,7 @@ if __name__ == "__main__":
         train_loader=train_loader,
         val_loader=val_loader,
         val_dataset=val_dataset,
-        optimizer=torch.optim.Adam(Model.parameters(), lr=learning_rate),
+        optimizer=torch.optim.Adam(Model.parameters(), lr=learning_rate), # already uses L2 regularization, tune strength with weight_decay (if overfitting, use stronger regularizer)
         num_epochs=num_epochs,
         device=device,
         save_path=savepath
