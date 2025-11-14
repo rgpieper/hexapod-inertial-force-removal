@@ -193,8 +193,15 @@ if __name__ == "__main__":
     os.mkdir(savefolder)
 
     # device setup
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") # on Anton, 2 GPUs: cuda:0, cuda:1
-    print(f"Using {device}.")
+    if torch.cuda.is_available():
+        device = torch.device("cuda:0") # on Anton, 2 GPUs: cuda:0, cuda:1
+        print("Device: Using CUDA (NVIDIA GPU)")
+    elif torch.backends.mps.is_available():
+        device = torch.device("mps")
+        print("Device: Using MPS (Apple Silicon GPU)")
+    else:
+        device = torch.device("cpu")
+        print("Device: Using CPU")
 
     data_file = "data/noLoadPerts_131125.h5"
 

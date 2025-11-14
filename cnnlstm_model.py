@@ -317,7 +317,15 @@ if __name__ == "__main__":
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, collate_fn=sequence_collate_fn)
 
     # device setup
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if torch.cuda.is_available():
+        device = torch.device("cuda:0") # on Anton, 2 GPUs: cuda:0, cuda:1
+        print("Device: Using CUDA (NVIDIA GPU)")
+    elif torch.backends.mps.is_available():
+        device = torch.device("mps")
+        print("Device: Using MPS (Apple Silicon GPU)")
+    else:
+        device = torch.device("cpu")
+        print("Device: Using CPU")
     Model.to(device)
 
     # setup optimizer
