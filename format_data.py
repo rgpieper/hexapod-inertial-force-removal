@@ -266,6 +266,25 @@ class WindowedSequences(Dataset):
             return X_window, Y_window
         else:
             return X_window
+        
+    def restructure_windowed_output(self, indexed_windows: List[Tuple[int, torch.Tensor]]) -> List[torch.Tensor]:
+        
+        num_output_chans = indexed_windows[0][1].numel()
+        output_tensors = [torch.zeros(in_tens.shape[0], num_output_chans) for in_tens in self.input_tensors]
+        summed_window_segments = [torch.zeros(in_tens.shape[0], num_output_chans) for in_tens in self.input_tensors]
+        prediction_counts = [torch.zeros(in_tens.shape[0]) for in_tens in self.input_tensors]
+
+        for index, window in indexed_windows:
+            series_idx, start_idx = self.index_map[index]
+            end_idx = start_idx + self.window_size
+            summed_window_segments[series_idx][start_idx:end_idx,:] += window
+            prediction_counts[series_idx][start_idx:end_idx] += 1
+
+        for series_idx, series_counts in enumerate(prediction_counts):
+            prediction_mask = series_counts != 0
+            output_tensors[series_idx][prediction_mask,:] = summed_window_segments[series_idx][prediction_mask,:] / prediction_counts[series_idx][prediction_mask].unsqueeze(1)
+
+        return output_tensors
 
 class FlattenedWindows(Dataset):
     def __init__(
