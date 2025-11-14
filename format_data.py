@@ -367,6 +367,24 @@ class VariableLengthSequences(Dataset):
         else:
             return X_segment, sequence_length
         
+def calc_standardization_stats(
+        input_segments: List[npt.ArrayLike],
+        output_segments: List[npt.ArrayLike]
+) -> Tuple[Tuple[npt.NDArray, npt.NDArray], Tuple[npt.NDArray, npt.NDArray]]:
+    
+    all_inputs = np.concatenate(input_segments, axis=0)
+    all_outputs = np.concatenate(output_segments, axis=0)
+
+    input_mean = all_inputs.mean(axis=0, dtype=np.float32)
+    input_std = all_inputs.std(axis=0, dtype=np.float32)
+    input_std[input_std == 0] = 1.0 # handle zero-variance channels
+
+    output_mean = all_outputs.mean(axis=0, dtype=np.float32)
+    output_std = all_outputs.std(axis=0, dtype=np.float32)
+    output_std[output_std == 0] = 1.0 # handle zero-variance channels
+
+    return (input_mean, input_std), (output_mean, output_std)
+
 def get_loader(
         dataset_class: Type[Dataset],
         input_arrays: List[npt.ArrayLike],
@@ -480,6 +498,8 @@ if __name__ == "__main__":
     h5_filepath = "data/noLoadPerts_131125.h5"
 
     accel_segs, force_segs, meta_data = load_perts_h5(h5_filepath)
+
+    input_stats, output_stats = calc_standardization_stats(accel_segs, force_segs)
 
     IPython.embed()
 

@@ -8,7 +8,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
-from format_data import C3DMan, VariableLengthSequences, sequence_collate_fn, unpad_unbatch
+from format_data import C3DMan, VariableLengthSequences, sequence_collate_fn, unpad_unbatch, calc_standardization_stats
 from mlp_model import calc_avg_vaf
 
 class MIMOCNNLSTM(nn.Module):
@@ -243,24 +243,6 @@ class MIMOCNNLSTM(nn.Module):
 
         self.load_state_dict(torch.load(path, map_location='cpu'))
         self.eval() # set model to evaluation mode
-
-def calc_standardization_stats(
-        input_segments: List[npt.ArrayLike],
-        output_segments: List[npt.ArrayLike]
-) -> Tuple[Tuple[npt.NDArray, npt.NDArray], Tuple[npt.NDArray, npt.NDArray]]:
-    
-    all_inputs = np.concatenate(input_segments, axis=0)
-    all_outputs = np.concatenate(output_segments, axis=0)
-
-    input_mean = all_inputs.mean(axis=0, dtype=np.float32)
-    input_std = all_inputs.std(axis=0, dtype=np.float32)
-    input_std[input_std == 0] = 1.0 # handle zero-variance channels
-
-    output_mean = all_outputs.mean(axis=0, dtype=np.float32)
-    output_std = all_outputs.std(axis=0, dtype=np.float32)
-    output_std[output_std == 0] = 1.0 # handle zero-variance channels
-
-    return (input_mean, input_std), (output_mean, output_std)
 
 if __name__ == "__main__":
 
