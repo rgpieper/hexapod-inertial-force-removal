@@ -101,7 +101,10 @@ class BasicMLP(nn.Module):
 
             indexed_outputs = []
             with torch.no_grad():
-                for batch_idx, (inputs, targets) in enumerate(val_loader):
+
+                val_loop = tqdm(enumerate(val_loader), desc=f"Validation", leave=False)
+
+                for batch_idx, (inputs, targets) in val_loop:
                     inputs, targets = inputs.to(device), targets.to(device)
 
                     outputs = self(inputs)
@@ -112,9 +115,10 @@ class BasicMLP(nn.Module):
                     indexed_outputs.append((batch_idx, outputs.squeeze(0)))
 
             all_outputs = val_dataset.restructure_windowed_output(indexed_outputs)
+            all_targets = [t.to(device) for t in val_dataset.target_tensors]
 
             epoch_val_loss = total_val_loss / len(val_loader.dataset)
-            epoch_val_vaf = calc_avg_vaf(all_outputs, val_dataset.target_tensors)
+            epoch_val_vaf = calc_avg_vaf(all_outputs, all_targets)
 
             # Report and Save Phase
             print(f"Epoch {epoch+1}/{num_epochs}")
@@ -145,6 +149,7 @@ class BasicMLP(nn.Module):
         self.eval() # set model to evaluation mode
 
 def calc_avg_vaf(outputs: List[torch.Tensor], targets: List[torch.Tensor]) -> float:
+    # assumes outputs and targets are already on the same device
 
     num_channels = targets[0].shape[1]
 

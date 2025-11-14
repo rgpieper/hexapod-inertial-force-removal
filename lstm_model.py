@@ -144,9 +144,10 @@ class MIMOLSTM(nn.Module):
                     indexed_outputs.append((batch_idx, outputs.squeeze(0)))
 
             all_outputs = val_dataset.restructure_windowed_output(indexed_outputs)
+            all_targets = [t.to(device) for t in val_dataset.target_tensors]
 
             epoch_val_loss = total_val_loss / len(val_loader.dataset)
-            epoch_val_vaf = calc_avg_vaf(all_outputs, val_dataset.target_tensors)
+            epoch_val_vaf = calc_avg_vaf(all_outputs, all_targets)
 
             # Report and Save Phase
             print(f"Epoch {epoch+1}/{num_epochs}")
