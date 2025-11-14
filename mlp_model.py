@@ -263,9 +263,6 @@ if __name__ == "__main__":
         "vaf": vaf_saved
     })
     
-    model_info_df = pd.DataFrame(model_info_list)
-    model_info_df.to_csv(os.path.join(savefolder, "mlp_model_info.csv"), index=False)
-    
     ### TRAIN MODEL FOR EACH PERTURBATION TYPE
     
     axes_x = [0, 50, 100, 150, 200]
@@ -345,3 +342,6 @@ if __name__ == "__main__":
                     "dir": dir,
                     "vaf": vaf_saved
                 })
+
+    model_info_df = pd.DataFrame(model_info_list)
+    model_info_df.to_csv(os.path.join(savefolder, "mlp_model_info.csv"), index=False)
