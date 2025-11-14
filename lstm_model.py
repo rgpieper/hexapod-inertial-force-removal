@@ -63,8 +63,8 @@ class MIMOLSTM(nn.Module):
         batch_size, window_length, _ = x_standardized.shape
 
         # initialize hidden state (h0) and cell state (c0) to zeros: (num_rnn_layers*num_directions), batch_size, hidden_rnn)
-        h0 = torch.zeros(self.num_rnn_layers*self.rnn_directions, batch_size, self.hidden_rnn).to(x_standardized.device)
-        c0 = torch.zeros(self.num_rnn_layers*self.rnn_directions, batch_size, self.hidden_rnn).to(x_standardized.device)
+        h0 = torch.zeros(self.num_layers_rnn*self.rnn_directions, batch_size, self.hidden_rnn).to(x_standardized.device)
+        c0 = torch.zeros(self.num_layers_rnn*self.rnn_directions, batch_size, self.hidden_rnn).to(x_standardized.device)
 
         # LSTM layers
         rnn_out, _ = self.rnn(x_standardized, (h0, c0)) # hidden state and cell state start at zero for each segment, thanks to pack_padded_sequence
