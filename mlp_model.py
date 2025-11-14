@@ -10,6 +10,7 @@ from torch.utils.data import DataLoader
 from typing import List, Tuple, Optional, Callable
 from format_data import C3DMan, FlattenedWindows, load_perts_h5, calc_standardization_stats
 from sklearn.model_selection import train_test_split
+from tqdm import tqdm
 import IPython
 
 class BasicMLP(nn.Module):
@@ -73,8 +74,11 @@ class BasicMLP(nn.Module):
             # Train Phase
             self.train() # set model to training mode
             running_train_loss = 0.0
+            summed_loss = 0.0
 
-            for inputs, targets in train_loader:
+            train_loop = tqdm(enumerate(train_loader), desc=f"Epoch {epoch+1}/{num_epochs} (Train)", leave=False)
+
+            for i, (inputs, targets) in train_loop:
                 inputs, targets = inputs.to(device), targets.to(device)
 
                 optimizer.zero_grad()
@@ -84,6 +88,10 @@ class BasicMLP(nn.Module):
                 optimizer.step()
 
                 running_train_loss += loss.item()*inputs.size(0)
+                summed_loss += loss.item()
+                current_avg_loss = summed_loss/(i+1)
+
+                train_loop.set_postfix(mse=f"{loss.item():.6f}", avg_mse=f"{current_avg_loss:.6f}")
 
             epoch_train_loss = running_train_loss / len(train_loader.dataset)
 
@@ -123,7 +131,7 @@ class BasicMLP(nn.Module):
 
         return best_vaf
     
-    def standardized_mse_loss(self, outputs: torch.Tensor, targets: torch.Tensor, criterion: Optional[Callable] = nn.MSELoss) -> torch.Tensor:
+    def standardized_mse_loss(self, outputs: torch.Tensor, targets: torch.Tensor, criterion: Optional[Callable] = nn.MSELoss()) -> torch.Tensor:
 
         # compare standardized prediction to standardized targets
         outputs_standardized = (outputs - self.output_mean) / self.output_std
