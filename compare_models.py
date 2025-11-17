@@ -50,17 +50,17 @@ if __name__ == "__main__":
         step_size=step_size
     )
 
-    lstmmodel_file = "models/lstm_models_###/lstm_general.pth"
-    LSTMModel = MIMOLSTM(
-        input_size=accel_chans,
-        output_size=force_chans
-    )
-    LSTMModel.load_weights(lstmmodel_file)
-    predictions_lstm = LSTMModel.predict_segments(
-        inputs=val_accel_segments,
-        window_size=window_size,
-        step_size=step_size
-    )
+    # lstmmodel_file = "models/lstm_models_###/lstm_general.pth"
+    # LSTMModel = MIMOLSTM(
+    #     input_size=accel_chans,
+    #     output_size=force_chans
+    # )
+    # LSTMModel.load_weights(lstmmodel_file)
+    # predictions_lstm = LSTMModel.predict_segments(
+    #     inputs=val_accel_segments,
+    #     window_size=window_size,
+    #     step_size=step_size
+    # )
 
     # plot predictions
     seg_idx = 2
@@ -69,7 +69,7 @@ if __name__ == "__main__":
 
     measurement = val_force_segments[seg_idx][seg_slice,:]
     prediction_mlp = predictions_mlp[seg_idx][seg_slice,:]
-    prediction_lstm = predictions_lstm[seg_idx][seg_slice,:]
+    # prediction_lstm = predictions_lstm[seg_idx][seg_slice,:]
     seg_meta_data = val_meta_data[seg_idx]
     seg_direction = "forward" if seg_meta_data["dir"] == 1 else "reverse"
 
@@ -85,16 +85,21 @@ if __name__ == "__main__":
             other_force_segs.append(match_force_segs[i])
     avg_seg = np.mean(np.stack(other_force_segs), axis=0)[seg_slice,:]
 
+    base_res = measurement - measurement
+    pred_mlp_res = prediction_mlp - measurement
+    avg_res = avg_seg - measurement
+
     vaf_pred_mlp = calc_avg_vaf([torch.from_numpy(prediction_mlp).float()], [torch.from_numpy(measurement).float()])
-    vaf_pred_lstm = calc_avg_vaf([torch.from_numpy(prediction_lstm).float()], [torch.from_numpy(measurement).float()])
+    # vaf_pred_lstm = calc_avg_vaf([torch.from_numpy(prediction_lstm).float()], [torch.from_numpy(measurement).float()])
     vaf_avg = calc_avg_vaf([torch.from_numpy(avg_seg).float()], [torch.from_numpy(measurement).float()])
 
     rows = 4
     cols = 2
 
-    fig, axs = plt.subplots(rows, cols, sharex=True, sharey=True)
+    chan_names = ['fx12', 'fx34', 'fy14', 'fy23', 'fz1', 'fz2', 'fz3', 'fz4']
 
-    fig.suptitle(f"Direction: {seg_direction}, X Pos: {seg_meta_data["axis_x"]}, Z Pos: {seg_meta_data["axis_z"]}", fontweight='bold')
+    fig1, axs1 = plt.subplots(rows, cols, sharex=True, sharey=False)
+    fig1.suptitle(f"Direction: {seg_direction}, X Pos: {seg_meta_data["axis_x"]}, Z Pos: {seg_meta_data["axis_z"]}", fontweight='bold')
 
     for i in range(rows):
 
@@ -102,17 +107,39 @@ if __name__ == "__main__":
 
             chan_idx = i + j*4
 
-            ax = axs[i,j]
+            ax = axs1[i,j]
 
             ax.plot(measurement[:,chan_idx], label="Measurement")
             ax.plot(avg_seg[:,chan_idx], label=f"Averaged: {vaf_avg:.01f}%", linestyle="--")
-            ax.plot(prediction_lstm[:,chan_idx], label=f"LSTM Prediction: {vaf_pred_lstm:.01f}%")
+            # ax.plot(prediction_lstm[:,chan_idx], label=f"LSTM Prediction: {vaf_pred_lstm:.01f}%")
             ax.plot(prediction_mlp[:,chan_idx], label=f"MLP Prediction: {vaf_pred_mlp:.01f}%")
+
+            ax.set_title(f"{chan_names[chan_idx]}", fontsize=6)
+
+            if i==0 and j==0:
+                ax.legend()
+
+    fig2, axs2 = plt.subplots(rows, cols, sharex=True, sharey=False)
+    fig2.suptitle(f"RESIDUALS: Direction: {seg_direction}, X Pos: {seg_meta_data["axis_x"]}, Z Pos: {seg_meta_data["axis_z"]}", fontweight='bold')
+
+    for i in range(rows):
+            
+        for j in range(cols):
+                
+            chan_idx = i + j*4
+
+            ax = axs2[i,j]
+
+            ax.plot(base_res[:,chan_idx], label="Measurement")
+            ax.plot(avg_res[:,chan_idx], label=f"Averaged: {vaf_avg:.01f}%", linestyle="--")
+            ax.plot(pred_mlp_res[:,chan_idx], label=f"MLP Prediction: {vaf_pred_mlp:.01f}%")
+
+            ax.set_title(f"{chan_names[chan_idx]}: Residuals", fontsize=6)
 
             if i==0 and j==0:
                 ax.legend()
     
-    plt.tight_layout()
+    # plt.tight_layout()
 
     plt.show()
 
