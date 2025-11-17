@@ -1,7 +1,7 @@
 
 import os
 from datetime import datetime
-from typing import Tuple, Callable, Optional
+from typing import List, Tuple, Callable, Optional
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
@@ -80,6 +80,37 @@ class MIMOLSTM(nn.Module):
         final_out = (final_out_standardized * self.output_std) + self.output_mean
 
         return final_out
+    
+    def predict_segments(
+            self,
+            inputs: List[npt.ArrayLike],
+            window_size: int,
+            step_size: int,
+            device: torch.device = torch.device("cpu")
+    ) -> List[npt.ArrayLike]:
+        
+        input_dataset = WindowedSequences(inputs, window_size, step_size)
+
+        input_loader = DataLoader(input_dataset, batch_size=1, shuffle=False)
+
+        self.eval()
+
+        indexed_outputs = []
+        with torch.no_grad():
+
+            predict_loop = tqdm(enumerate(input_loader), desc=f"Predicting outputs", leave=False)
+
+            for batch_idx, inputs in predict_loop:
+                inputs = inputs.to(device)
+
+                outputs = self(inputs)
+
+                indexed_outputs.append((batch_idx, outputs.squeeze(0)))
+
+        all_output_tensors = input_dataset.restructure_windowed_output(indexed_outputs)
+        all_outputs = [t.cpu().numpy() for t in all_output_tensors]
+
+        return all_outputs
     
     def train_val_save(
             self,
