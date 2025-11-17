@@ -18,20 +18,19 @@ class BasicMLP(nn.Module):
             self,
             input_dim: int,
             output_dim: int,
-            input_stats: Tuple[npt.NDArray, npt.NDArray],
-            output_stats: Tuple[npt.NDArray, npt.NDArray],
             hidden_dim_1: int = 2048,
             hidden_dim_2: int = 4096
     ):
         super().__init__()
 
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+
         # register standardization buffers
-        input_mean, input_std = input_stats
-        self.register_buffer('input_mean', torch.from_numpy(input_mean).float())
-        self.register_buffer('input_std', torch.from_numpy(input_std).float())
-        output_mean, output_std = output_stats
-        self.register_buffer('output_mean', torch.from_numpy(output_mean).float())
-        self.register_buffer('output_std', torch.from_numpy(output_std).float())
+        self.register_buffer('input_mean', torch.zeros(input_dim))
+        self.register_buffer('input_std', torch.zeros(input_dim))
+        self.register_buffer('output_mean', torch.zeros(output_dim))
+        self.register_buffer('output_std', torch.zeros(output_dim))
 
         self.fc1 = nn.Linear(input_dim, hidden_dim_1) # feature extration/compression
         self.fc2 = nn.Linear(hidden_dim_1, hidden_dim_2) # feature expansion/refinement
@@ -53,8 +52,14 @@ class BasicMLP(nn.Module):
 
         return x # output tensor
     
+    def predict_segments(self, inputs: List[npt.ArrayLike]) -> List[npt.ArrayLike]:
+
+        num_channels = inputs[0].shape[1]
+    
     def train_val_save(
             self,
+            input_stats: Tuple[npt.NDArray, npt.NDArray],
+            output_stats: Tuple[npt.NDArray, npt.NDArray],
             train_loader: DataLoader,
             val_loader: DataLoader,
             val_dataset: FlattenedWindows,
@@ -63,6 +68,13 @@ class BasicMLP(nn.Module):
             device: torch.device,
             save_path: str
     ) -> float:
+        
+        input_mean, input_std = input_stats
+        self.input_mean = torch.from_numpy(input_mean).float()
+        self.input_std = torch.from_numpy(input_std).float()
+        output_mean, output_std = output_stats
+        self.output_mean = torch.from_numpy(output_mean).float()
+        self.output_std = torch.from_numpy(output_std).float()
         
         best_val_loss = float("inf")
         best_vaf = float("inf")
@@ -251,14 +263,14 @@ if __name__ == "__main__":
     # instantiate model
     Model = BasicMLP(
         input_dim=input_dim,
-        output_dim=output_dim,
-        input_stats=flat_input_stats,
-        output_stats=flat_output_stats
+        output_dim=output_dim
     )
     Model.to(device)
 
     # train the model
     vaf_saved = Model.train_val_save(
+        input_stats=flat_input_stats,
+        output_stats=flat_output_stats,
         train_loader=train_loader,
         val_loader=val_loader,
         val_dataset=val_dataset,
@@ -331,14 +343,14 @@ if __name__ == "__main__":
                 # instantiate model
                 Model = BasicMLP(
                     input_dim=input_dim,
-                    output_dim=output_dim,
-                    input_stats=flat_input_stats,
-                    output_stats=flat_output_stats
+                    output_dim=output_dim
                 )
                 Model.to(device)
 
                 # train the model
                 vaf_saved = Model.train_val_save(
+                    input_stats=flat_input_stats,
+                    output_stats=flat_output_stats,
                     train_loader=train_loader,
                     val_loader=val_loader,
                     val_dataset=val_dataset,
