@@ -19,25 +19,24 @@ class MIMOLSTM(nn.Module):
             self,
             input_size: int,
             output_size: int,
-            input_stats: Tuple[npt.NDArray, npt.NDArray],
-            output_stats: Tuple[npt.NDArray, npt.NDArray],
             hidden_rnn: int = 64,
             num_layers_rnn: int = 2,
             hidden_lin: int = 64
     ):
         super().__init__()
 
+        self.input_size = input_size
+        self.output_size = output_size
+
         self.hidden_rnn = hidden_rnn
         self.num_layers_rnn = num_layers_rnn
         self.output_size = output_size
 
         # register standardization buffers
-        input_mean, input_std = input_stats
-        self.register_buffer('input_mean', torch.from_numpy(input_mean).float())
-        self.register_buffer('input_std', torch.from_numpy(input_std).float())
-        output_mean, output_std = output_stats
-        self.register_buffer('output_mean', torch.from_numpy(output_mean).float())
-        self.register_buffer('output_std', torch.from_numpy(output_std).float())
+        self.register_buffer('input_mean', torch.zeros(input_size))
+        self.register_buffer('input_std', torch.zeros(input_size))
+        self.register_buffer('output_mean', torch.zeros(output_size))
+        self.register_buffer('output_std', torch.zeros(output_size))
 
         self.rnn_directions = 2 # 1: unidirectional (causal), 2: bidirectional (non-causal)
         self.rnn = nn.LSTM(
@@ -84,6 +83,8 @@ class MIMOLSTM(nn.Module):
     
     def train_val_save(
             self,
+            input_stats: Tuple[npt.NDArray, npt.NDArray],
+            output_stats: Tuple[npt.NDArray, npt.NDArray],
             train_loader: DataLoader,
             val_loader: DataLoader,
             val_dataset: WindowedSequences,
@@ -92,6 +93,13 @@ class MIMOLSTM(nn.Module):
             device: torch.device,
             save_path:str
     ) -> float:
+        
+        input_mean, input_std = input_stats
+        self.input_mean = torch.from_numpy(input_mean).float()
+        self.input_std = torch.from_numpy(input_std).float()
+        output_mean, output_std = output_stats
+        self.output_mean = torch.from_numpy(output_mean).float()
+        self.output_std = torch.from_numpy(output_std).float()
         
         best_val_loss = float("inf")
         best_vaf = float("inf")
@@ -248,14 +256,14 @@ if __name__ == "__main__":
 
     Model = MIMOLSTM(
         input_size=accel_chans,
-        output_size=force_chans,
-        input_stats=input_stats,
-        output_stats=output_stats,
+        output_size=force_chans
     )
     Model.to(device)
 
     # train the model
     vaf_saved = Model.train_val_save(
+        input_stats=input_stats,
+        output_stats=output_stats,
         train_loader=train_loader,
         val_loader=val_loader,
         val_dataset=val_dataset,
@@ -326,14 +334,14 @@ if __name__ == "__main__":
                 # instantiate model
                 Model = MIMOLSTM(
                     input_size=accel_chans,
-                    output_size=force_chans,
-                    input_stats=input_stats,
-                    output_stats=output_stats
+                    output_size=force_chans
                 )
                 Model.to(device)
 
                 # train the model
                 vaf_saved = Model.train_val_save(
+                    input_stats=input_stats,
+                    output_stats=output_stats,
                     train_loader=train_loader,
                     val_loader=val_loader,
                     val_dataset=val_dataset,
