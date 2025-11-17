@@ -52,9 +52,38 @@ class BasicMLP(nn.Module):
 
         return x # output tensor
     
-    def predict_segments(self, inputs: List[npt.ArrayLike]) -> List[npt.ArrayLike]:
+    def predict_segments(
+            self,
+            inputs: List[npt.ArrayLike],
+            step_size: int,
+            device: torch.device = torch.device("cpu")
+    ) -> List[npt.ArrayLike]:
 
         num_channels = inputs[0].shape[1]
+        window_size = self.input_dim // num_channels
+
+        input_dataset = FlattenedWindows(inputs, window_size, step_size)
+
+        input_loader = DataLoader(input_dataset, batch_size=1, shuffle=False) # batch size 1 for sequence reconstruction
+
+        self.eval()
+
+        indexed_outputs = []
+        with torch.no_grad():
+
+            predict_loop = tqdm(enumerate(input_loader), desc=f"Predicting outputs", leave=False)
+
+            for batch_idx, inputs in predict_loop:
+                inputs = inputs.to(device)
+
+                outputs = self(inputs)
+
+                indexed_outputs.append((batch_idx, outputs.squeeze(0)))
+
+        all_output_tensors = input_dataset.restructure_windowed_output(indexed_outputs)
+        all_outputs = [t.cpu().numpy() for t in all_output_tensors]
+
+        return all_outputs
     
     def train_val_save(
             self,
