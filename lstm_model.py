@@ -1,5 +1,6 @@
 
 import os
+import sys
 from datetime import datetime
 from typing import List, Tuple, Callable, Optional
 import torch
@@ -8,11 +9,11 @@ from torch.utils.data import DataLoader
 import pandas as pd
 import numpy as np
 import numpy.typing as npt
-from format_data import WindowedSequences, load_perts_h5, calc_standardization_stats
-from mlp_model import calc_avg_vaf
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 import IPython
+from hexapod_force_modeling.format_data import WindowedSequences, load_perts_h5, calc_standardization_stats
+from hexapod_force_modeling.mlp_model import calc_avg_vaf
 
 class MIMOLSTM(nn.Module):
     def __init__(

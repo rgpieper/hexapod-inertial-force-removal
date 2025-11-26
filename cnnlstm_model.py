@@ -1,4 +1,6 @@
 
+import os
+import sys
 from typing import Tuple, List
 from datetime import datetime
 import numpy as np
@@ -8,8 +10,11 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
-from format_data import C3DMan, VariableLengthSequences, sequence_collate_fn, unpad_unbatch, calc_standardization_stats
-from mlp_model import calc_avg_vaf
+
+sys.path.append(os.path.abspath(".."))
+
+from hexapod_force_modeling.format_data import C3DMan, VariableLengthSequences, sequence_collate_fn, unpad_unbatch, calc_standardization_stats
+from hexapod_force_modeling.mlp_model import calc_avg_vaf
 
 class MIMOCNNLSTM(nn.Module):
     def __init__(

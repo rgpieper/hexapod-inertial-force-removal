@@ -1,10 +1,12 @@
 
+import os
+import sys
 import torch
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from format_data import load_perts_h5
-from mlp_model import calc_avg_vaf
+from hexapod_force_modeling.format_data import load_perts_h5
+from hexapod_force_modeling.mlp_model import calc_avg_vaf
 
 if __name__ == "__main__":
 

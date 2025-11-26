@@ -1,4 +1,6 @@
 
+import os
+import sys
 from typing import Tuple, List
 from datetime import datetime
 import numpy as np
@@ -8,9 +10,9 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
-from format_data import WindowedSequences, VariableLengthSequences, C3DMan, sequence_collate_fn, get_loader, calc_standardization_stats
-from mlp_model import calc_avg_vaf
 import IPython
+from hexapod_force_modeling.format_data import WindowedSequences, VariableLengthSequences, C3DMan, sequence_collate_fn, get_loader, calc_standardization_stats
+from hexapod_force_modeling.mlp_model import calc_avg_vaf
 
 class MIMOFIR(nn.Module):
     def __init__(

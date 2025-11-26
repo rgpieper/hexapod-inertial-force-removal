@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+import os
+import sys
 import ezc3d
 import c3d
 import h5py
@@ -515,6 +517,8 @@ def load_perts_h5(
     return accel_segs, force_segs, meta_data
 
 if __name__ == "__main__":
+
+    sys.path.append(os.path.abspath(".."))
 
     h5_filepath = "data/noLoadPerts_131125.h5"
 

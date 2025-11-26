@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "hexapod-inertial-force-removal"
 version = "0.1.0"
@@ -21,3 +25,6 @@ dependencies = [
 
 [tool.uv.pip]
 extra-index-url = ["https://download.pytorch.org/whl/cu126"]
+
+[tool.setuptools]
+packages = ["hexapod_force_modeling"]

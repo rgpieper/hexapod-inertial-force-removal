@@ -1,5 +1,6 @@
 
 import os
+import sys
 from datetime import datetime
 import pandas as pd
 import numpy as np
@@ -8,10 +9,10 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from typing import List, Tuple, Optional, Callable
-from format_data import FlattenedWindows, load_perts_h5, calc_standardization_stats
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 import IPython
+from hexapod_force_modeling.format_data import FlattenedWindows, load_perts_h5, calc_standardization_stats
 
 class BasicMLP(nn.Module):
     def __init__(
@@ -217,6 +218,8 @@ def calc_avg_vaf(outputs: List[torch.Tensor], targets: List[torch.Tensor]) -> fl
     return sum(segment_avg_vafs)/len(segment_avg_vafs)
     
 if __name__ == "__main__":
+
+    sys.path.append(os.path.abspath(".."))
 
     window_size = 500
     step_size = 50

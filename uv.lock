@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.12"
 
 [[package]]
@@ -249,7 +249,7 @@ wheels = [
 [[package]]
 name = "hexapod-inertial-force-removal"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "c3d" },
     { name = "ezc3d" },
